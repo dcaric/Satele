@@ -1,0 +1,159 @@
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadContentFromMessage } = require('@whiskeysockets/baileys');
+const { Boom } = require('@hapi/boom');
+const pino = require('pino');
+const axios = require('axios');
+const path = require('path');
+const fs = require('fs');
+
+// Configuration
+const SERVER_URL = "http://localhost:8000/webhook/message";
+const ANTIGRAVITY_TRIGGER = "gravity";
+const AUTH_DIR = path.resolve(__dirname, '.mudslide_cache');
+const MEDIA_DIR = path.resolve(__dirname, 'media');
+
+if (!fs.existsSync(MEDIA_DIR)) fs.mkdirSync(MEDIA_DIR);
+
+const logger = pino({ level: 'info' });
+
+async function downloadMedia(message, type) {
+    const stream = await downloadContentFromMessage(message, type);
+    let buffer = Buffer.from([]);
+    for await (const chunk of stream) {
+        buffer = Buffer.concat([buffer, chunk]);
+    }
+    const fileName = `${Date.now()}.${type === 'audio' ? 'ogg' : 'bin'}`;
+    const filePath = path.join(MEDIA_DIR, fileName);
+    fs.writeFileSync(filePath, buffer);
+    return filePath;
+}
+
+async function startWhatsApp() {
+    console.log("🚀 Starting WhatsApp Linked-Device Listener (using Baileys)...");
+
+    // Load authentication state from the mudslide cache
+    const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+
+    const sock = makeWASocket({
+        auth: state,
+        printQRInTerminal: true,
+        logger: logger
+    });
+
+    // Save credentials when updated
+    sock.ev.on('creds.update', saveCreds);
+
+    // Monitor connection status
+    sock.ev.on('connection.update', (update) => {
+        const { connection, lastDisconnect } = update;
+        if (connection === 'close') {
+            const shouldReconnect = (lastDisconnect.error instanceof Boom) ?
+                lastDisconnect.error.output.statusCode !== DisconnectReason.loggedOut : true;
+            console.log('❌ Connection closed due to ', lastDisconnect.error, ', reconnecting ', shouldReconnect);
+            if (shouldReconnect) {
+                startWhatsApp();
+            }
+        } else if (connection === 'open') {
+            console.log('✅ WhatsApp connection opened successfully!');
+        }
+    });
+
+    // Listen for incoming messages
+    sock.ev.on('messages.upsert', async m => {
+        const { messages, type } = m;
+        console.log(`📥 Received message event: ${type} (${messages.length} messages)`);
+
+        for (const msg of messages) {
+            let text = msg.message?.conversation ||
+                msg.message?.extendedTextMessage?.text ||
+                msg.message?.imageMessage?.caption;
+
+            const isAudio = !!msg.message?.audioMessage;
+            const fromMe = msg.key.fromMe;
+            const sender = msg.key.remoteJid;
+            const targetSender = fromMe ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : sender;
+
+            let mediaPath = null;
+
+            if (isAudio && msg.message.audioMessage.ptt) {
+                console.log("🎙️ Received Voice Note!");
+                try {
+                    mediaPath = await downloadMedia(msg.message.audioMessage, 'audio');
+                    console.log(`✅ Saved voice note to ${mediaPath}`);
+                    // For voice notes, we treat them as if they have the trigger implicitly 
+                    // or we check if user said anything in text. Since it's PTT, we 
+                    // usually just process it.
+                    text = "@gravity [VOICE]";
+                } catch (e) {
+                    console.error("❌ Failed to download audio:", e.message);
+                }
+            }
+
+            if (text) {
+                console.log(`💬 Message from ${fromMe ? 'ME' : sender}: "${text}"`);
+
+                // 1. Prevent Loops: Ignore messages that are bot responses
+                if (text.startsWith("🤖") || text.includes("[Bot]")) {
+                    return;
+                }
+
+                // 2. Trigger Check (using regex for word boundary to avoid "antigravity" matching "gravity")
+                const triggerRegex = new RegExp(`\\b${ANTIGRAVITY_TRIGGER}\\b`, 'i');
+                const isTriggered = triggerRegex.test(text) || (isAudio && mediaPath);
+
+                if (isTriggered) {
+                    console.log(`🎯 Trigger matched!`);
+
+                    try {
+                        await axios.post(SERVER_URL, {
+                            text: text,
+                            sender: targetSender,
+                            source: 'whatsapp',
+                            fromMe: fromMe,
+                            mediaPath: mediaPath
+                        });
+                        console.log("✅ Forwarded to Antigravity server.");
+
+                        // 3. Updated Acknowledgment (Avoid using the trigger word itself)
+                        const ackText = isAudio ? "🎙️ [Bot] Listening to your voice note..." : "🤖 [Bot] Received! Analyzing your request...";
+                        await sock.sendMessage(targetSender, { text: ackText });
+                    } catch (err) {
+                        console.error("❌ Bridge Error:", err.message);
+                    }
+                }
+            }
+        }
+    });
+
+    // Handle credentials save
+    sock.ev.on('creds.update', saveCreds);
+
+    // Keep track of the socket to allow sending messages from the API
+    global.whatsappSock = sock;
+    global.whatsappSockUser = sock.user;
+}
+
+// REST server to allow Python/FastAPI to send WhatsApp messages back
+const express = require('express');
+const expressApp = express();
+expressApp.use(express.json());
+
+expressApp.post('/send', async (req, res) => {
+    const { to, text } = req.body;
+    console.log(`📤 Outgoing message to ${to}: ${text.substring(0, 50)}...`);
+    if (global.whatsappSock && to && text) {
+        try {
+            await global.whatsappSock.sendMessage(to, { text: text });
+            console.log("✅ Message sent successfully.");
+            return res.json({ status: 'sent' });
+        } catch (e) {
+            console.error("❌ Failed to send message:", e.message);
+            return res.status(500).json({ error: e.message });
+        }
+    }
+    console.warn("⚠️ WhatsApp not connected or missing params");
+    res.status(500).json({ error: 'WhatsApp not connected or missing params' });
+});
+
+expressApp.listen(8001, () => console.log("📡 WhatsApp Send-API listening on 8001"));
+
+startWhatsApp().catch(err => console.error("Critical Error:", err));

@@ -104,13 +104,26 @@ def process_instruction(instruction, media_path=None):
             # FILE UPLOAD INTERCEPT
             if cmd.startswith("UPLOAD:"):
                 raw_path = cmd.split("UPLOAD:")[1].strip()
+                
+                # Expand wildcards first
+                if "*" in raw_path or "?" in raw_path:
+                    import glob
+                    matches = glob.glob(raw_path) if os.path.isabs(raw_path) else glob.glob(os.path.join(os.getcwd(), raw_path))
+                    if matches:
+                        # Pick the newest file
+                        matches.sort(key=os.path.getmtime, reverse=True)
+                        raw_path = matches[0]
+                        log(f"🌟 Expanded wildcard '{cmd}' -> '{raw_path}'")
+                    else:
+                        log(f"⚠️ Wildcard '{raw_path}' found no matches.")
+
                 # Auto-expand relative paths
                 if not os.path.isabs(raw_path):
                     abs_path = os.path.abspath(os.path.join(os.getcwd(), raw_path))
-                    log(f"📂 Converting relative path '{raw_path}' -> '{abs_path}'")
+                    log(f"📂 Converting relative path -> '{abs_path}'")
                     return f"UPLOAD: {abs_path}"
                 else:
-                    return cmd
+                    return f"UPLOAD: {raw_path}"
             
             log(f"➡️ Running: {cmd}")
             out = run_shell(cmd)

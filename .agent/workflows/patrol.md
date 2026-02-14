@@ -1,6 +1,7 @@
 ---
 description: Start an autonomous patrol of your WhatsApp inbox
 ---
+
 1. Verify the bridge is running
 // turbo
 2. Check for new messages from WhatsApp

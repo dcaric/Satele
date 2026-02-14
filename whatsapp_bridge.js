@@ -115,7 +115,7 @@ async function startWhatsApp() {
                         console.log("✅ Forwarded to Antigravity server.");
 
                         // 3. Updated Acknowledgment (Avoid using the trigger word itself)
-                        const ackText = isAudio ? "🎙️ [Bot] Listening to your voice note..." : "🤖 [Bot] Received! Analyzing your request...";
+                        const ackText = isAudio ? "🎙️ [Satele] Listening..." : "🤖 [Satele] Working...";
                         await sock.sendMessage(targetSender, { text: ackText });
                     } catch (err) {
                         console.error("❌ Bridge Error:", err.message);

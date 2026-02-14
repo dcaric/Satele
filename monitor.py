@@ -60,11 +60,11 @@ def ai_interpret(instruction, media_path=None):
 
     prompt = """
     You are an AI bridge between a Senior Developer's iPhone and their MacBook terminal.
-    Your job is to translate the natural language instruction (which might be in the audio) into exactly one safe macOS bash command.
+    Your job is to translate the natural language instruction (which might be in the audio) into macOS bash commands.
     
     Rules:
-    1. Respond ONLY with the command. No explanation.
-    2. If it's a question about the system, find a command to answer it.
+    1. Respond with safe bash commands, ONE PER LINE. No compilation, no markdown, no explanation.
+    2. If it's a complex task, break it down into multiple lines.
     3. If you can't hear anything or it's unsafe, respond with 'UNSUPPORTED'.
     4. CWD: {cwd}
     """.format(cwd=os.getcwd())
@@ -73,7 +73,10 @@ def ai_interpret(instruction, media_path=None):
         # Send everything to Gemini
         total_prompt = [prompt] + content_parts
         response = model.generate_content(total_prompt)
-        return response.text.replace('`', '').strip()
+        text_response = response.text.replace('`', '').strip()
+        # Ensure we don't have empty lines
+        commands = [line.strip() for line in text_response.split('\n') if line.strip()]
+        return commands
     except Exception as e:
         log(f"AI Interpretation Error: {e}")
         return None
@@ -81,21 +84,30 @@ def ai_interpret(instruction, media_path=None):
 def process_instruction(instruction, media_path=None):
     log(f"📩 Processing: {instruction} (Media: {media_path is not None})")
     
-    # 1. Direct Shell Access (Text only)
+    # 1. Direct Shell Access (Text only - supports multi-command with ;)
     if not media_path and instruction.lower().startswith("sh:"):
         cmd = instruction[3:].strip()
         return f"Executing Raw: {cmd}\n---\n{run_shell(cmd)}"
 
-    # 2. AI Interpretation (Text or Voice)
-    suggested_cmd = ai_interpret(instruction, media_path)
+    # 2. AI Interpretation (Text or Voice) -> Returns LIST of commands
+    command_list = ai_interpret(instruction, media_path)
     
-    if suggested_cmd and suggested_cmd != "UNSUPPORTED":
-        log(f"🤖 AI suggested command: {suggested_cmd}")
-        output = run_shell(suggested_cmd)
-        return f"🤖 AI interpreted as: `{suggested_cmd}`\n---\n{output}"
+    if command_list and command_list[0] != "UNSUPPORTED":
+        full_output = []
+        log(f"🤖 AI suggested plan: {command_list}")
+        
+        for cmd in command_list:
+            # Skip comments or empty lines
+            if not cmd or cmd.startswith("#"): continue
+            
+            log(f"➡️ Running: {cmd}")
+            out = run_shell(cmd)
+            full_output.append(f"> {cmd}\n{out}")
+            
+        return "\n\n".join(full_output)
     
-    # 3. Fallback to conversation logic
-    return f"I received: '{instruction}'. I couldn't safely translate this to a command. Try 'sh: <command>'. Or check if GOOGLE_API_KEY is set."
+    # 3. Fallback
+    return f"I received: '{instruction}'. I couldn't safely translate this commands. Try 'sh: <command>'."
 
 def monitor_loop():
     log(f"🚀 Autonomous Monitoring Started... ({log_brain})")

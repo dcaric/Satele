@@ -13,28 +13,37 @@ export BRIDGE_SECRET_KEY="default-secret-key"
 
 function start() {
     echo "🪐 Starting Satele Services..."
-    
-    # 1. Check if already running
-    if lsof -i :8000 > /dev/null; then
-        echo "⚠️  Satele is already running (Port 8000 busy)."
-        exit 1
+    cd "$BASE_DIR"
+
+    # Cleanup Old Media
+    mkdir -p media
+    rm -f media/*
+
+    # 1. Start FastAPI Server
+    if ! pgrep -f "Python server/main.py" > /dev/null; then
+        source venv/bin/activate
+        nohup python3 server/main.py >> satele.log 2>&1 &
+        echo "✅ FastAPI Server Started on Port 8000"
+    else
+        echo "✅ FastAPI Server already running."
     fi
 
-    # 2. Cleanup
-    mkdir -p "$BASE_DIR/media"
-    rm -rf "$BASE_DIR/media/*"
-    
-    # 3. Start everything in background
-    cd "$BASE_DIR"
-    
-    # Start FastAPI
-    nohup "$BASE_DIR/venv/bin/python" server/main.py >> "$BASE_DIR/satele.log" 2>&1 &
-    
-    # Start AI Monitor
-    nohup "$BASE_DIR/venv/bin/python" monitor.py >> "$BASE_DIR/satele.log" 2>&1 &
-    
-    # Start WhatsApp Bridge
-    nohup node whatsapp_bridge.js >> "$BASE_DIR/satele.log" 2>&1 &
+    # 2. Start WhatsApp Bridge
+    if ! pgrep -f "node whatsapp_bridge.js" > /dev/null; then
+        BOT_TRIGGER="$NAME" nohup node whatsapp_bridge.js >> satele.log 2>&1 &
+        echo "✅ WhatsApp Bridge Started"
+    else
+        echo "✅ WhatsApp Bridge already running."
+    fi
+
+    # 3. Start AI Monitor
+    if ! pgrep -f "monitor.py" > /dev/null; then
+        source venv/bin/activate
+        nohup python3 monitor.py >> satele.log 2>&1 &
+        echo "✅ AI Monitor (Brain) Started"
+    else
+        echo "✅ AI Monitor already running."
+    fi
     
     echo "✅ Satele is now active in the background."
     echo "📄 Check logs with: tail -f satele.log"

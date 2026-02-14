@@ -6,3 +6,5 @@ bridge.log
 __pycache__/
 *.pyc
 node_modules/
+satele.log
+media/

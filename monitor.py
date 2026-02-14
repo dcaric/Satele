@@ -103,10 +103,14 @@ def process_instruction(instruction, media_path=None):
             
             # FILE UPLOAD INTERCEPT
             if cmd.startswith("UPLOAD:"):
-                # If there are multiple commands, and one is upload, we might have an issue
-                # For now, let's just return the upload command as the full result
-                log(f"📤 Preparing to upload: {cmd}")
-                return cmd
+                raw_path = cmd.split("UPLOAD:")[1].strip()
+                # Auto-expand relative paths
+                if not os.path.isabs(raw_path):
+                    abs_path = os.path.abspath(os.path.join(os.getcwd(), raw_path))
+                    log(f"📂 Converting relative path '{raw_path}' -> '{abs_path}'")
+                    return f"UPLOAD: {abs_path}"
+                else:
+                    return cmd
             
             log(f"➡️ Running: {cmd}")
             out = run_shell(cmd)

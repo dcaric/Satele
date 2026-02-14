@@ -222,6 +222,7 @@ function help() {
     echo "  name <name>         Set the bot's trigger name (default: satele)"
     echo "  geminikey <key>     Set your Google Gemini API Key"
     echo "  whatsapp            Launch interactive mode to link a device via QR code"
+    echo "  setup-sudo          Enable passwordless sudo (Optional, use with caution)"
     echo "  install             Install the connection skill globally (for IDE)"
     echo "  link                Enable remote control in the current project"
     echo "  help                Show this message"
@@ -267,6 +268,10 @@ case "$1" in
         ;;
     help|--help|-h)
         help
+        ;;
+    setup-sudo)
+        echo "🔐 Starting sudo configuration..."
+        sudo "$BASE_DIR/setup_sudo.sh"
         ;;
     *)
         help

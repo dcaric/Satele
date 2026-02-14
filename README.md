@@ -54,7 +54,8 @@ satele link
 | `satele name <name>` | Sets a custom wake-word (Default: `satele`). |
 | `satele geminikey <key>` | Sets or updates your Google Gemini API Key. |
 | `satele whatsapp` | Restarts the linking process to show the QR code. |
-| `satele install` | Installs the connection skill to `~/satele_global`. |
+| `satele install` | Installs the Satele Skill globally to your IDE (`~/satele_global`). |
+| `satele setup-sudo` | **(Advanced)** Configures passwordless `sudo` for your user. Use this to allow Satele to run admin commands like `shutdown`, `reboot`, or `powermetrics` without asking for password. |
 | `satele link` | Enables `/satele` command in the current project by linking the global skill. |
 | `satele kill` | Force kills all processes if `stop` fails. |
 

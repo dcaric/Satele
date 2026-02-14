@@ -1,0 +1,1 @@
+/Users/dcaric/satele_global/workflows/satele.md

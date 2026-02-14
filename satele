@@ -1,0 +1,226 @@
+#!/bin/bash
+
+# Satele CLI - The Antigravity Remote Bridge Controller
+# Usage: 
+#   satele start    - Start the bridge services
+#   satele stop     - Stop the bridge services
+#   satele name     - Set the trigger word (e.g. satele name mark)
+#   satele status   - Check if services are running
+
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export REMOTE_BRIDGE_URL="http://localhost:8000"
+export BRIDGE_SECRET_KEY="default-secret-key"
+
+function start() {
+    echo "🪐 Starting Satele Services..."
+    
+    # 1. Check if already running
+    if lsof -i :8000 > /dev/null; then
+        echo "⚠️  Satele is already running (Port 8000 busy)."
+        exit 1
+    fi
+
+    # 2. Cleanup
+    mkdir -p "$BASE_DIR/media"
+    rm -rf "$BASE_DIR/media/*"
+    
+    # 3. Start everything in background
+    cd "$BASE_DIR"
+    
+    # Start FastAPI
+    nohup "$BASE_DIR/venv/bin/python" server/main.py >> "$BASE_DIR/satele.log" 2>&1 &
+    
+    # Start AI Monitor
+    nohup "$BASE_DIR/venv/bin/python" monitor.py >> "$BASE_DIR/satele.log" 2>&1 &
+    
+    # Start WhatsApp Bridge
+    nohup node whatsapp_bridge.js >> "$BASE_DIR/satele.log" 2>&1 &
+    
+    echo "✅ Satele is now active in the background."
+    echo "📄 Check logs with: tail -f satele.log"
+}
+
+function stop() {
+    echo "🛑 Stopping Satele Services..."
+    pkill -f "Python server/main.py"
+    pkill -f "node whatsapp_bridge.js"
+    pkill -f "monitor.py"
+    echo "✅ All Satele processes terminated."
+}
+
+function set_name() {
+    local NEW_NAME=$1
+    if [ -z "$NEW_NAME" ]; then
+        echo "❌ Usage: satele name <new_name>"
+        exit 1
+    fi
+    
+    # Update .env file
+    if [ -f "$BASE_DIR/.env" ]; then
+        if grep -q "BOT_TRIGGER=" "$BASE_DIR/.env"; then
+            # Replace existing
+            sed -i '' "s/BOT_TRIGGER=.*/BOT_TRIGGER=$NEW_NAME/" "$BASE_DIR/.env"
+        else
+            # Append new
+            echo "BOT_TRIGGER=$NEW_NAME" >> "$BASE_DIR/.env"
+        fi
+        echo "✅ Trigger name updated to: $NEW_NAME"
+        echo "🔄 Note: You must restart satele (stop/start) to apply the change."
+    else
+        echo "❌ .env file not found. Run start first."
+    fi
+}
+
+function status() {
+    echo "📊 Satele Status:"
+    if lsof -i :8000 > /dev/null; then echo "🔹 FastAPI: RUNNING"; else echo "🔸 FastAPI: STOPPED"; fi
+    if pgrep -f "whatsapp_bridge.js" > /dev/null; then echo "🔹 WhatsApp Bridge: RUNNING"; else echo "🔸 WhatsApp Bridge: STOPPED"; fi
+    if pgrep -f "monitor.py" > /dev/null; then echo "🔹 AI Monitor: RUNNING"; else echo "🔸 AI Monitor: STOPPED"; fi
+}
+
+function whatsapp_link() {
+    echo "📱 Starting WhatsApp Linking Process..."
+    echo "💡 Instruction: Scan the QR code below with your WhatsApp ('Linked Devices')"
+    echo "⚠️  Note: This will stop any running Satele services first."
+    stop
+    cd "$BASE_DIR"
+    # Run node bridge directly in foreground to show QR code
+    BOT_TRIGGER="satele" node whatsapp_bridge.js
+}
+
+function set_gemini_key() {
+    local NEW_KEY=$1
+    if [ -z "$NEW_KEY" ]; then
+        echo "❌ Usage: satele geminikey <your_api_key>"
+        exit 1
+    fi
+
+    # Check if .env exists, if not create from example
+    if [ ! -f "$BASE_DIR/.env" ]; then
+        if [ -f "$BASE_DIR/.env.example" ]; then
+            cp "$BASE_DIR/.env.example" "$BASE_DIR/.env"
+            echo "📝 Created .env from .env.example"
+        else
+            echo "⚠️  .env.example not found, creating new .env"
+            echo "REMOTE_BRIDGE_URL=http://localhost:8000" > "$BASE_DIR/.env"
+            echo "BRIDGE_SECRET_KEY=default-secret-key" >> "$BASE_DIR/.env"
+            echo "BOT_TRIGGER=satele" >> "$BASE_DIR/.env"
+        fi
+    fi
+    
+    # Update or Add GOOGLE_API_KEY
+    if grep -q "GOOGLE_API_KEY=" "$BASE_DIR/.env"; then
+        # Replace existing key (using a temp file strategy for cross-platform compat)
+        sed "s|GOOGLE_API_KEY=.*|GOOGLE_API_KEY=$NEW_KEY|" "$BASE_DIR/.env" > "$BASE_DIR/.env.tmp" && mv "$BASE_DIR/.env.tmp" "$BASE_DIR/.env"
+        echo "✅ Updated existing GOOGLE_API_KEY."
+    else
+        # Append new key
+        echo "GOOGLE_API_KEY=$NEW_KEY" >> "$BASE_DIR/.env"
+        echo "✅ Added new GOOGLE_API_KEY."
+    fi
+    
+    echo "🔄 Note: You must restart satele (stop/start) to apply the change."
+}
+
+function install_skill_globally() {
+    local GLOBAL_SKILL_DIR="$HOME/satele_global"
+    echo "🌍 Installing Satele Skill globally to $GLOBAL_SKILL_DIR..."
+    
+    mkdir -p "$GLOBAL_SKILL_DIR"
+    # Copy the local .agent folder to the global location
+    if [ -d "$BASE_DIR/.agent" ]; then
+         cp -r "$BASE_DIR/.agent/"* "$GLOBAL_SKILL_DIR/"
+         echo "✅ Satele Skill installed globally."
+    else
+         echo "⚠️  Could not find local .agent folder in $BASE_DIR."
+         return 1
+    fi
+}
+
+function link_project() {
+    local TARGET_DIR=$(pwd)
+    local GLOBAL_SKILL_DIR="$HOME/satele_global"
+    
+    echo "🔗 Linking Satele capability to current project: $TARGET_DIR"
+    
+    if [ ! -d "$GLOBAL_SKILL_DIR" ]; then
+        echo "❌ Satele Skill not found globally. Run 'satele install' first."
+        return 1
+    fi
+    
+    # Create .agent structure if missing
+    mkdir -p "$TARGET_DIR/.agent/skills"
+    mkdir -p "$TARGET_DIR/.agent/workflows"
+    
+    # Symlink the Skills
+    ln -sf "$GLOBAL_SKILL_DIR/skills/satele_control" "$TARGET_DIR/.agent/skills/"
+    echo "   - Linked Skill: satele_control"
+    
+    # Symlink the Workflows
+    ln -sf "$GLOBAL_SKILL_DIR/workflows/satele.md" "$TARGET_DIR/.agent/workflows/satele.md"
+    echo "   - Linked Workflow: /satele"
+    
+    echo "✅ Project Linked! You can now use '/satele' in this workspace."
+}
+
+function help() {
+    echo "🪐 Satele CLI - The Antigravity Remote Bridge Controller"
+    echo ""
+    echo "Usage: satele <command> [arguments]"
+    echo ""
+    echo "Commands:"
+    echo "  start               Start the bridge services in the background"
+    echo "  stop                Stop all running bridge services"
+    echo "  status              Check if services are running"
+    echo "  kill                Force kill all related processes"
+    echo "  name <name>         Set the bot's trigger name (default: satele)"
+    echo "  geminikey <key>     Set your Google Gemini API Key"
+    echo "  whatsapp            Launch interactive mode to link a device via QR code"
+    echo "  install             Install the connection skill globally"
+    echo "  link                Enable Satele (remote control) in the current project"
+    echo "  help                Show this help message"
+    echo ""
+    echo "Logs:"
+    echo "  tail -f $BASE_DIR/satele.log"
+}
+
+# Command Router
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    kill)
+        pkill -f "Python server/main.py"
+        pkill -f "node whatsapp_bridge.js"
+        pkill -f "monitor.py"
+        echo "💀 Force killed all processes."
+        ;;
+    name)
+        set_name "$2"
+        ;;
+    geminikey)
+        set_gemini_key "$2"
+        ;;
+    install)
+        install_skill_globally
+        ;;
+    link)
+        link_project
+        ;;
+    status)
+        status
+        ;;
+    whatsapp)
+        whatsapp_link
+        ;;
+    help|--help|-h)
+        help
+        ;;
+    *)
+        help
+        exit 1
+        ;;
+esac

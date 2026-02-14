@@ -48,10 +48,12 @@ async def handle_incoming_message(payload: dict):
     if not message_text and not media_path:
         return {"status": "ignored", "reason": "no text or media"}
     
+    trigger = os.getenv("BOT_TRIGGER", "satele").lower()
+    
     task_id = str(uuid.uuid4())
     new_task = {
         "id": task_id, 
-        "instruction": message_text.lower().replace("gravity", "").strip() if message_text else "[VOICE COMMAND]", 
+        "instruction": message_text.lower().replace(trigger, "").strip() if message_text else "[VOICE COMMAND]", 
         "sender": sender,
         "source": source,
         "media_path": media_path,

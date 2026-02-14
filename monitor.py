@@ -113,6 +113,11 @@ def monitor_loop():
                 instruction = task['instruction']
                 media_path = task.get('media_path')
                 
+                # Satele Logic: If the user says "use gravity", we let the Antigravity Agent handle it.
+                if "use gravity" in instruction.lower():
+                    log(f"🧠 Handoff: '{instruction}' -> Letting Antigravity Agent handle this.")
+                    continue
+
                 result = process_instruction(instruction, media_path)
                 
                 requests.post(

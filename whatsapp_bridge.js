@@ -7,7 +7,7 @@ const fs = require('fs');
 
 // Configuration
 const SERVER_URL = "http://localhost:8000/webhook/message";
-const ANTIGRAVITY_TRIGGER = "gravity";
+const ANTIGRAVITY_TRIGGER = process.env.BOT_TRIGGER || "satele";
 const AUTH_DIR = path.resolve(__dirname, '.mudslide_cache');
 const MEDIA_DIR = path.resolve(__dirname, 'media');
 
@@ -35,8 +35,9 @@ async function startWhatsApp() {
 
     const sock = makeWASocket({
         auth: state,
+        logger,
         printQRInTerminal: true,
-        logger: logger
+        browser: ["Satele Remote", "Chrome", "1.0.0"]
     });
 
     // Save credentials when updated

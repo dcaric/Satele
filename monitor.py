@@ -65,7 +65,7 @@ def ai_interpret(instruction, media_path=None):
     Rules:
     1. Respond with safe bash commands, ONE PER LINE. No compilation, no markdown, no explanation.
     2. If it's a complex task, break it down into multiple lines.
-    3. If the user asks for a file (send me X), output EXACTLY: `UPLOAD: /absolute/path/to/file` (nothing else).
+    3. If the user asks for a file (e.g. 'send me satele.log'), output EXACTLY: `UPLOAD: satele.log`. Do not try to be smart with paths.
     4. If you can't hear anything or it's unsafe, respond with 'UNSUPPORTED'.
     5. CWD: {cwd}
     """.format(cwd=os.getcwd())

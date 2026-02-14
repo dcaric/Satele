@@ -12,7 +12,14 @@ Enable the `satele` command from any terminal folder:
 echo "alias satele='/Users/dcaric/Working/ml/AntigravityMessages/satele'" >> ~/.zshrc && source ~/.zshrc
 ```
 
-### 2. Configure Brain
+### 2. Install Dependencies
+Run the built-in setup command to install Python and Node.js packages:
+```bash
+./satele setup
+```
+*(Or manually: `npm install` and `python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt`)*
+
+### 3. Configure Brain
 Set your Gemini API Key (required for voice commands and background monitoring):
 ```bash
 satele geminikey AIzaSy...

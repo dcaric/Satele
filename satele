@@ -163,12 +163,36 @@ function link_project() {
     echo "✅ Project Linked! You can now use '/satele' in this workspace."
 }
 
+function setup() {
+    echo "🛠️  Setting up Satele Dependencies..."
+    cd "$BASE_DIR"
+
+    # 1. Node.js (Bridge)
+    if [ -f "package.json" ]; then
+        echo "📦 Installing Node.js packages..."
+        npm install --silent
+    fi
+    
+    # 2. Python (Brain)
+    if [ ! -d "venv" ]; then
+        echo "🐍 Creating Python Virtual Environment..."
+        python3 -m venv venv
+    fi
+    
+    echo "📦 Installing Python packages..."
+    source venv/bin/activate
+    pip install -r requirements.txt --quiet
+    
+    echo "✅ Setup Complete! You can now run 'satele start'."
+}
+
 function help() {
     echo "🪐 Satele CLI - The Antigravity Remote Bridge Controller"
     echo ""
     echo "Usage: satele <command> [arguments]"
     echo ""
     echo "Commands:"
+    echo "  setup               Install dependencies (Node.js & Python)"
     echo "  start               Start the bridge services in the background"
     echo "  stop                Stop all running bridge services"
     echo "  status              Check if services are running"
@@ -176,9 +200,9 @@ function help() {
     echo "  name <name>         Set the bot's trigger name (default: satele)"
     echo "  geminikey <key>     Set your Google Gemini API Key"
     echo "  whatsapp            Launch interactive mode to link a device via QR code"
-    echo "  install             Install the connection skill globally"
-    echo "  link                Enable Satele (remote control) in the current project"
-    echo "  help                Show this help message"
+    echo "  install             Install the connection skill globally (for IDE)"
+    echo "  link                Enable remote control in the current project"
+    echo "  help                Show this message"
     echo ""
     echo "Logs:"
     echo "  tail -f $BASE_DIR/satele.log"
@@ -186,6 +210,9 @@ function help() {
 
 # Command Router
 case "$1" in
+    setup)
+        setup
+        ;;
     start)
         start
         ;;

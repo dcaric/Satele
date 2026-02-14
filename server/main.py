@@ -97,11 +97,22 @@ async def report_result(
             # Check for File Upload Command
             if output.strip().startswith("UPLOAD:"):
                 filepath = output.strip().split("UPLOAD:")[1].strip()
-                requests.post("http://localhost:8001/send-media", json={
+                resp = requests.post("http://localhost:8001/send-media", json={
                     "to": sender,
                     "filePath": filepath,
                     "caption": f"📄 Here is the file: {os.path.basename(filepath)}"
                 })
+                
+                if resp.status_code != 200:
+                    try:
+                        err_msg = resp.json().get('error', 'Unknown Error')
+                    except:
+                        err_msg = f"HTTP {resp.status_code}"
+                    
+                    requests.post("http://localhost:8001/send", json={
+                         "to": sender,
+                         "text": f"❌ Failed to send file: {err_msg}"
+                     })
             else:
                 # Standard Text Reply
                 requests.post("http://localhost:8001/send", json={
@@ -109,7 +120,7 @@ async def report_result(
                     "text": f"✅ Result:\n{output}"
                 })
         except Exception as e:
-            print(f"❌ Failed to send reply: {e}")
+            print(f"❌ Failed to process reply: {e}")
     
     return {"status": "received"}
 

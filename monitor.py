@@ -63,7 +63,7 @@ def ai_interpret(instruction, media_path=None):
     Your job is to translate the natural language instruction (which might be in the audio) into macOS bash commands.
     
     Rules:
-    1. Respond with safe bash commands, ONE PER LINE. No compilation, no markdown, no explanation.
+    1. Respond with safe bash commands, ONE PER LINE. No compilation, no markdown, no explanation, NO HTML (<br> etc).
     2. If it's a complex task, break it down into multiple lines.
     3. If the user asks for a file (e.g. 'send me satele.log'), output EXACTLY: `UPLOAD: satele.log`. Do not try to be smart with paths.
     4. If you can't hear anything or it's unsafe, respond with 'UNSUPPORTED'.
@@ -75,6 +75,10 @@ def ai_interpret(instruction, media_path=None):
         total_prompt = [prompt] + content_parts
         response = model.generate_content(total_prompt)
         text_response = response.text.replace('`', '').strip()
+        
+        # Handle cases where Gemini puts <br> instead of newline
+        text_response = text_response.replace('<br>', '\n').replace('<br/>', '\n')
+        
         # Ensure we don't have empty lines
         commands = [line.strip() for line in text_response.split('\n') if line.strip()]
         return commands

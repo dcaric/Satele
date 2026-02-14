@@ -19,6 +19,12 @@ function start() {
     mkdir -p media
     rm -f media/*
 
+    # Load Config from .env to capture NAME
+    if [ -f ".env" ]; then
+        NAME=$(grep BOT_TRIGGER .env | cut -d '=' -f2)
+    fi
+    if [ -z "$NAME" ]; then NAME="satele"; fi
+
     # 1. Start FastAPI Server
     if ! pgrep -f "Python server/main.py" > /dev/null; then
         source venv/bin/activate

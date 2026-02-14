@@ -104,6 +104,7 @@ async def report_result(
                 })
                 
                 if resp.status_code != 200:
+                    # Fallback message if file fails
                     try:
                         err_msg = resp.json().get('error', 'Unknown Error')
                     except:
@@ -111,7 +112,7 @@ async def report_result(
                     
                     requests.post("http://localhost:8001/send", json={
                          "to": sender,
-                         "text": f"❌ Failed to send file: {err_msg}"
+                         "text": f"❌ Failed to send file: {err_msg}\n(Path: {filepath})"
                      })
             else:
                 # Standard Text Reply

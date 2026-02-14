@@ -122,8 +122,11 @@ async function startWhatsApp() {
                         });
                         console.log("✅ Forwarded to Antigravity server.");
 
-                        // 3. Updated Acknowledgment (Avoid using the trigger word itself)
-                        const ackText = isAudio ? "🎙️ [Satele] Listening..." : "🤖 [Satele] Working...";
+                        // 3. Updated Acknowledgment (Avoid using the trigger word itself?)
+                        // Actually, users want to know which bot replied (M3 vs Satele)
+                        // But we capitalize it for niceness
+                        const botName = ANTIGRAVITY_TRIGGER.charAt(0).toUpperCase() + ANTIGRAVITY_TRIGGER.slice(1);
+                        const ackText = isAudio ? `🎙️ [${botName}] Listening...` : `🤖 [${botName}] Working...`;
                         await sock.sendMessage(targetSender, { text: ackText });
                     } catch (err) {
                         console.error("❌ Bridge Error:", err.message);

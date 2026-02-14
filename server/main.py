@@ -94,10 +94,20 @@ async def report_result(
     if source == "whatsapp" and sender:
         import requests
         try:
-            requests.post("http://localhost:8001/send", json={
-                "to": sender,
-                "text": f"✅ Result:\n{output}"
-            })
+            # Check for File Upload Command
+            if output.strip().startswith("UPLOAD:"):
+                filepath = output.strip().split("UPLOAD:")[1].strip()
+                requests.post("http://localhost:8001/send-media", json={
+                    "to": sender,
+                    "filePath": filepath,
+                    "caption": f"📄 Here is the file: {os.path.basename(filepath)}"
+                })
+            else:
+                # Standard Text Reply
+                requests.post("http://localhost:8001/send", json={
+                    "to": sender,
+                    "text": f"✅ Result:\n{output}"
+                })
         except Exception as e:
             print(f"❌ Failed to send reply: {e}")
     

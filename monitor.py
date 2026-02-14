@@ -65,8 +65,9 @@ def ai_interpret(instruction, media_path=None):
     Rules:
     1. Respond with safe bash commands, ONE PER LINE. No compilation, no markdown, no explanation.
     2. If it's a complex task, break it down into multiple lines.
-    3. If you can't hear anything or it's unsafe, respond with 'UNSUPPORTED'.
-    4. CWD: {cwd}
+    3. If the user asks for a file (send me X), output EXACTLY: `UPLOAD: /absolute/path/to/file` (nothing else).
+    4. If you can't hear anything or it's unsafe, respond with 'UNSUPPORTED'.
+    5. CWD: {cwd}
     """.format(cwd=os.getcwd())
     
     try:
@@ -99,6 +100,13 @@ def process_instruction(instruction, media_path=None):
         for cmd in command_list:
             # Skip comments or empty lines
             if not cmd or cmd.startswith("#"): continue
+            
+            # FILE UPLOAD INTERCEPT
+            if cmd.startswith("UPLOAD:"):
+                # If there are multiple commands, and one is upload, we might have an issue
+                # For now, let's just return the upload command as the full result
+                log(f"📤 Preparing to upload: {cmd}")
+                return cmd
             
             log(f"➡️ Running: {cmd}")
             out = run_shell(cmd)

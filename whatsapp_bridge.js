@@ -161,6 +161,40 @@ expressApp.post('/send', async (req, res) => {
     res.status(500).json({ error: 'WhatsApp not connected or missing params' });
 });
 
+expressApp.post('/send-media', async (req, res) => {
+    const { to, filePath, caption } = req.body;
+    console.log(`📤 Outgoing media to ${to}: ${filePath}`);
+
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: "File not found on server" });
+    }
+
+    if (global.whatsappSock && to) {
+        try {
+            // Determine mimetype (basic)
+            const ext = path.extname(filePath).toLowerCase();
+            let mimetype = 'application/octet-stream';
+            if (['.jpg', '.jpeg', '.png'].includes(ext)) mimetype = 'image/jpeg';
+            if (['.mp4'].includes(ext)) mimetype = 'video/mp4';
+            if (['.pdf'].includes(ext)) mimetype = 'application/pdf';
+
+            await global.whatsappSock.sendMessage(to, {
+                document: { url: filePath },
+                mimetype: mimetype,
+                fileName: path.basename(filePath),
+                caption: caption || ""
+            });
+
+            console.log("✅ Media sent successfully.");
+            return res.json({ status: 'sent' });
+        } catch (e) {
+            console.error("❌ Failed to send media:", e.message);
+            return res.status(500).json({ error: e.message });
+        }
+    }
+    res.status(500).json({ error: 'WhatsApp not connected' });
+});
+
 expressApp.listen(8001, () => console.log("📡 WhatsApp Send-API listening on 8001"));
 
 startWhatsApp().catch(err => console.error("Critical Error:", err));

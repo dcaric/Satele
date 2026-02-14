@@ -83,9 +83,16 @@ function whatsapp_link() {
     echo "💡 Instruction: Scan the QR code below with your WhatsApp ('Linked Devices')"
     echo "⚠️  Note: This will stop any running Satele services first."
     stop
+    
+    # Clear old session to force new QR code
+    if [ -d "$BASE_DIR/.mudslide_cache" ]; then
+        echo "🧹 Clearing old session cache..."
+        rm -rf "$BASE_DIR/.mudslide_cache"
+    fi
+
+    # Run interactively so we see the QR code
     cd "$BASE_DIR"
-    # Run node bridge directly in foreground to show QR code
-    BOT_TRIGGER="satele" node whatsapp_bridge.js
+    node whatsapp_bridge.js
 }
 
 function set_gemini_key() {

@@ -3,6 +3,7 @@ const { Boom } = require('@hapi/boom');
 const pino = require('pino');
 const axios = require('axios');
 const path = require('path');
+const qrcode = require('qrcode-terminal');
 const fs = require('fs');
 
 // Configuration
@@ -13,7 +14,7 @@ const MEDIA_DIR = path.resolve(__dirname, 'media');
 
 if (!fs.existsSync(MEDIA_DIR)) fs.mkdirSync(MEDIA_DIR);
 
-const logger = pino({ level: 'info' });
+const logger = pino({ level: 'silent' }); // Silent pino logs to keep terminal clean for QR
 
 async function downloadMedia(message, type) {
     const stream = await downloadContentFromMessage(message, type);
@@ -27,36 +28,41 @@ async function downloadMedia(message, type) {
     return filePath;
 }
 
+// ... (Configuration remains same)
+
 async function startWhatsApp() {
     console.log("🚀 Starting WhatsApp Linked-Device Listener (using Baileys)...");
 
-    // Load authentication state from the mudslide cache
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
 
     const sock = makeWASocket({
         auth: state,
         logger,
-        printQRInTerminal: true,
+        printQRInTerminal: false, // Turned off deprecated
         browser: ["Satele Remote", "Chrome", "1.0.0"]
     });
 
-    // Save credentials when updated
     sock.ev.on('creds.update', saveCreds);
 
-    // Monitor connection status
     sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect } = update;
+        const { connection, lastDisconnect, qr } = update;
+
+        if (qr) {
+            console.log("\n📷 SCAN THIS QR CODE NOW:\n");
+            qrcode.generate(qr, { small: true });
+        }
+
         if (connection === 'close') {
             const shouldReconnect = (lastDisconnect.error instanceof Boom) ?
                 lastDisconnect.error.output.statusCode !== DisconnectReason.loggedOut : true;
-            console.log('❌ Connection closed due to ', lastDisconnect.error, ', reconnecting ', shouldReconnect);
-            if (shouldReconnect) {
-                startWhatsApp();
-            }
+            console.log('❌ Connection closed, reconnecting ', shouldReconnect);
+            if (shouldReconnect) startWhatsApp();
         } else if (connection === 'open') {
             console.log('✅ WhatsApp connection opened successfully!');
         }
     });
+
+    // ... (rest of the file)
 
     // Listen for incoming messages
     sock.ev.on('messages.upsert', async m => {

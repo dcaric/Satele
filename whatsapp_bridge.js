@@ -98,8 +98,10 @@ async function startWhatsApp() {
             if (text) {
                 console.log(`💬 Message from ${fromMe ? 'ME' : sender}: "${text}"`);
 
-                // 1. Prevent Loops: Ignore messages that are bot responses
-                if (text.startsWith("🤖") || text.includes("[Bot]")) {
+                // 1. Prevent Loops: Ignore messages that are likely bot outputs
+                if (text.startsWith("🤖") || text.includes("[Bot]") ||
+                    text.startsWith("✅") || text.startsWith("❌") || text.startsWith("🎙️")) {
+                    console.log("🚫 Ignoring bot output message.");
                     return;
                 }
 

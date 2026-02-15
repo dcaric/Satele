@@ -263,7 +263,10 @@ def process_instruction(instruction, media_path=None):
         return "\n\n".join(full_output)
     
     # 3. Fallback
-    return f"I received: '{instruction}'. I couldn't safely translate this commands. Try 'sh: <command>'."
+    # 3. Fallback
+    error_detail = ""
+    if command_list is None: error_detail = " (AI returned None - Check API Key/Model/Logs)"
+    return f"I received: '{instruction}'. I couldn't safely translate this commands{error_detail}. Try 'sh: <command>'.\n[INTERNAL DEBUG]: Check /tmp/satele_dcaric.log"
 
 def monitor_loop():
     log(f"🚀 Autonomous Monitoring Started... ({log_brain})")

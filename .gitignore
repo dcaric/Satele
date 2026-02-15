@@ -1,10 +1,27 @@
+
+# Environment Variables
 .env
-.npm_cache/
-.mudslide_cache/
+.env.local
+
+# Virtual Environments
 venv/
-bridge.log
 __pycache__/
-*.pyc
+
+# Dependencies
 node_modules/
+
+# Logs & Data
 satele.log
+token_usage.json
 media/
+.mudslide_cache/
+
+# System
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Agent
+.agent/memory/

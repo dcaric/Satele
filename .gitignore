@@ -19,13 +19,13 @@ media/
 # System
 .DS_Store
 
-# Editor
-.vscode/
-.idea/
-
 # Agent
 .agent/memory/
 .npm_cache/
 
-.DS_Store
+# Data
 satele_memory/
+brain/satele_memory/
+satele_cfg.env
+
+.zip

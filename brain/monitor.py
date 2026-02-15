@@ -289,18 +289,39 @@ def process_instruction(instruction, media_path=None):
                     raw_path = os.path.abspath(os.path.join(os.getcwd(), raw_path))
                     log(f"📂 Converting relative path -> '{raw_path}'")
 
-                # --- CASE CORRECTION HEURISTIC ---
-                # If AI lowercased AntigravityMessages -> antigravitymessages, we fix it
-                if not os.path.exists(raw_path):
-                    parent = os.path.dirname(raw_path)
-                    target_name = os.path.basename(raw_path).lower()
-                    if os.path.exists(parent):
-                        for item in os.listdir(parent):
-                            if item.lower() == target_name:
-                                corrected_path = os.path.join(parent, item)
-                                log(f"✨ Auto-corrected Case: '{raw_path}' -> '{corrected_path}'")
-                                raw_path = corrected_path
-                                break
+                # --- RECURSIVE CASE CORRECTION ---
+                # Fixed: Handle deep paths like /users/dcaric/antigravitymessages/media/x
+                def resolve_case_insensitive(path):
+                    if os.path.exists(path): return path
+                    
+                    parts = path.lstrip(os.path.sep).split(os.path.sep)
+                    current = os.path.sep if path.startswith(os.path.sep) else ""
+                    
+                    for part in parts:
+                        if not part: continue
+                        found = False
+                        # Check exist with current casing
+                        attempt = os.path.join(current, part)
+                        if os.path.exists(attempt):
+                            current = attempt
+                            found = True
+                        else:
+                            # Search parent for a case-insensitive match
+                            if os.path.exists(current) and os.path.isdir(current):
+                                try:
+                                    for item in os.listdir(current):
+                                        if item.lower() == part.lower():
+                                            current = os.path.join(current, item)
+                                            found = True
+                                            break
+                                except: pass
+                        
+                        if not found:
+                             return path # Give up, return original
+                    return current
+
+                raw_path = resolve_case_insensitive(raw_path)
+                log(f"🔗 Final Resolved Path: {raw_path}")
                 
                 return f"UPLOAD: {raw_path}"
             

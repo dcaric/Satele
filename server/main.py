@@ -53,7 +53,7 @@ async def handle_incoming_message(payload: dict):
     task_id = str(uuid.uuid4())
     new_task = {
         "id": task_id, 
-        "instruction": message_text.lower().replace(trigger, "").strip() if message_text else "[VOICE COMMAND]", 
+        "instruction": message_text.replace(trigger, "").replace(trigger.upper(), "").replace(trigger.capitalize(), "").strip() if message_text else "[VOICE COMMAND]", 
         "sender": sender,
         "source": source,
         "media_path": media_path,

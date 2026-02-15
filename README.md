@@ -68,10 +68,6 @@ docker exec satele_bridge satele status
 ```
 > **Note:** When running in Docker, you must include the word **"host"** or **"working"** in your message (e.g., *"List my host downloads"*) to access your Windows files. Otherwise, Satele will look inside the container key.
 
-> *Satele Docker running on Windows:*
-> ![Windows folder listing Example](images_examples/win2.png)
-> ![Windows cd folder Example](images_examples/cd_folder.png)
-
 ### 4. Persistent Memory Features (New!)
 Satele now includes advanced state management to make your remote sessions feel like a real terminal:
 
@@ -91,6 +87,10 @@ Clone the repository to your desired location (e.g., `~/satele`):
 git clone https://github.com/dcaric/Satele.git ~/satele
 cd ~/satele
 ```
+> *Satele Docker running on Windows:*
+> ![Windows folder listing Example](images_examples/win2.png)
+> ![Windows cd folder Example](images_examples/cd_folder.png)
+
 
 ### 2. Install Dependencies
 Run the built-in setup command to install Node.js modules and Python virtual environment:

@@ -348,3 +348,25 @@ This is the most advanced use case. Satele is not just a bot; she is an **output
 Unlike a standard SSH client (which is painful on mobile):
 *   **Context Aware:** She knows you are in Docker but want Windows files (`/host_home`).
 *   **Persistent:** She remembers you were in `~/Working/ml` yesterday.
+
+### 🚀 Advanced Automation: GUI Scripting
+Satele can be "upgraded" beyond simple shell commands by chaining system tools like **AppleScript** (macOS) or **Display** tools. Here is a practical example of automating a calculator and getting visual feedback:
+
+**Command:**
+```bash
+sh: open -a Calculator; osascript -e 'tell application "Calculator" to activate'; sleep 2; osascript -e 'tell application "System Events" to keystroke "2+2="'; sleep 2; /usr/sbin/screencapture -x /Users/dcaric/Working/ml/AntigravityMessages/media/calc.png; echo "UPLOAD: /Users/dcaric/Working/ml/AntigravityMessages/media/calc.png"
+```
+
+**How it works:**
+1.  **Launch:** `open -a Calculator` opens the application.
+2.  **Focus:** `osascript` tells the app to "activate" (come to front).
+3.  **Type:** It simulates real keystrokes (`2+2=`) as if you were sitting at the desk.
+4.  **Capture:** `screencapture` takes a picture of the resulting window.
+5.  **Upload:** `UPLOAD:` triggers Satele to send that image back to your WhatsApp instantly.
+
+> *Result of the automation script:*
+> ![Calculator Screenshot Example](images_examples/calculator.png)
+
+---
+
+## 🚀 Installation & Setup

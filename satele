@@ -65,14 +65,27 @@ function start() {
     mkdir -p media
     rm -f media/*
 
-    # Load Config from satele_cfg.env to capture vars
-    NAME="satele"
-    if [ -f "$BASE_DIR/satele_cfg.env" ]; then
-        set -a
-        source "$BASE_DIR/satele_cfg.env"
-        set +a
-        if [ -n "$BOT_TRIGGER" ]; then NAME="$BOT_TRIGGER"; fi
+    # Load Config (Auto-migrate if missing)
+    local ENV_FILE="$BASE_DIR/satele_cfg.env"
+    if [ ! -f "$ENV_FILE" ]; then
+        if [ -f "$BASE_DIR/satele_cfg.env.example" ]; then
+            cp "$BASE_DIR/satele_cfg.env.example" "$ENV_FILE"
+        elif [ -f "$BASE_DIR/.env" ]; then
+            cp "$BASE_DIR/.env" "$ENV_FILE"
+        else
+            touch "$ENV_FILE"
+        fi
     fi
+
+    # Source variables
+    set -a
+    source "$ENV_FILE"
+    set +a
+    
+    NAME=${BOT_TRIGGER:-"satele"}
+
+    # Sync config to Brain subdirectory (for monitor.py)
+    cp "$ENV_FILE" "$BASE_DIR/brain/.env"
 
     # 1. Start FastAPI Server
     if ! pgrep -f "Python server/main.py" > /dev/null; then

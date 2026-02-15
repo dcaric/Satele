@@ -65,14 +65,24 @@ def ai_interpret(instruction, media_path=None):
     content_parts = [f"System Instruction: Translate to 1 safe macOS bash command.\nUser Input: {instruction}"]
     
     if media_path and os.path.exists(media_path):
-        log(f"🎤 Uploading audio for analysis: {media_path}")
-        try:
-            if model: # Only try uploading if Gemini is configured?
-                # For Gemini 1.5/2.0+ we usually upload the file or pass raw bytes
-                audio_file = genai.upload_file(path=media_path)
-                content_parts.append(audio_file)
-        except Exception as e:
-            log(f"Audio upload error: {e}")
+        # Determine file type
+        ext = os.path.splitext(media_path)[1].lower()
+        is_audio = ext in ['.ogg', '.mp3', '.wav', '.m4a']
+        
+        if is_audio:
+            log(f"🎙️ Uploading audio for analysis: {media_path}")
+            try:
+                if model:
+                    audio_file = genai.upload_file(path=media_path)
+                    content_parts.append(audio_file)
+            except Exception as e:
+                log(f"Audio upload error: {e}")
+        else:
+            log(f"📂 Received file/image: {media_path}")
+            # We don't necessarily need to upload it to Gemini unless we want it to 'see' the image
+            # But we MUST tell the AI where the file is so it can operate on it.
+            prompt_media_info = f"\n📎 A file was received and is available at: {media_path}"
+            content_parts[0] += prompt_media_info
 
     provider = os.getenv("AI_PROVIDER", "gemini").lower()
     current_model = os.getenv("OLLAMA_MODEL", "gemma:2b") if provider == "ollama" else "gemini"
@@ -92,17 +102,18 @@ def ai_interpret(instruction, media_path=None):
     
     prompt_text = """
     You are an AI bridge between a Senior Developer's iPhone and their {os_name} terminal.
-    Your job is to translate the natural language instruction (which might be in the audio) into safe {os_name} bash commands.
+    Your job is to translate the natural language instruction into safe {os_name} bash commands.
+    
+    Important: If a file path is provided in the input, you can use it (e.g., to move, copy, or zip it).
     
     Rules:
-    1. Respond with safe bash commands, ONE PER LINE. No compilation, no markdown, no explanation, NO HTML (<br> etc).
+    1. Respond with safe bash commands, ONE PER LINE. No compilation, no markdown, no explanation, NO HTML.
     2. If it's a complex task, break it down into multiple lines.
-    3. Use `UPLOAD: <filepath>` ONLY when the user explicitly asks to download/get a specific file. NEVER use `UPLOAD:` for directories or lists of files (use `ls` instead).
-    4. If you can't hear anything or it's unsafe, respond with 'UNSUPPORTED'.
-    5. Tip: For zipping, use wildcards: `zip archive.zip *.json *.log`. Avoid `find ... -print0` pipes as they can fail on some shells.
-    6. Tip: To chain commands, use separate lines or `&&`. To send the zip after creation, add a new line: `UPLOAD: archive.zip`.
-    7. CWD: {cwd}
-    8. System Info: OS ({os_name}), AI ({provider} - {model}), User ({user})
+    3. Use `UPLOAD: <filepath>` ONLY when the user explicitly asks to download/get a specific file FROM the server to their phone.
+    4. Tip: If the user sends a file and says 'save it', you should move it from its temporary media path to a logical place (like ~/Downloads or ~/Desktop).
+    5. Tip: For zipping, use wildcards: `zip archive.zip *.json *.log`. 
+    6. CWD: {cwd}
+    7. System Info: OS ({os_name}), AI ({provider} - {model}), User ({user})
     {context}
     """.format(cwd=os.getcwd(), provider=provider, model=current_model, os_name=system_os, user=username, context=context_str)
     

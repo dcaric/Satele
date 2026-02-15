@@ -16,13 +16,13 @@ if (!fs.existsSync(MEDIA_DIR)) fs.mkdirSync(MEDIA_DIR);
 
 const logger = pino({ level: 'silent' }); // Silent pino logs to keep terminal clean for QR
 
-async function downloadMedia(message, type) {
+async function downloadMedia(message, type, extension = 'bin') {
     const stream = await downloadContentFromMessage(message, type);
     let buffer = Buffer.from([]);
     for await (const chunk of stream) {
         buffer = Buffer.concat([buffer, chunk]);
     }
-    const fileName = `${Date.now()}.${type === 'audio' ? 'ogg' : 'bin'}`;
+    const fileName = `${Date.now()}.${extension}`;
     const filePath = path.join(MEDIA_DIR, fileName);
     fs.writeFileSync(filePath, buffer);
     return filePath;
@@ -44,7 +44,7 @@ async function startWhatsApp() {
 
     sock.ev.on('creds.update', saveCreds);
 
-    sock.ev.on('connection.update', (update) => {
+    sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
@@ -72,9 +72,13 @@ async function startWhatsApp() {
         for (const msg of messages) {
             let text = msg.message?.conversation ||
                 msg.message?.extendedTextMessage?.text ||
-                msg.message?.imageMessage?.caption;
+                msg.message?.imageMessage?.caption ||
+                msg.message?.documentMessage?.caption;
 
             const isAudio = !!msg.message?.audioMessage;
+            const isImage = !!msg.message?.imageMessage;
+            const isDocument = !!msg.message?.documentMessage;
+
             const fromMe = msg.key.fromMe;
             const sender = msg.key.remoteJid;
             const targetSender = fromMe ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : sender;
@@ -88,7 +92,7 @@ async function startWhatsApp() {
             const isAllowed = fromMe || allowedList.includes(senderId);
 
             if (!isAllowed) {
-                console.log(`🚫 START_IGNORE: Blocked message from unauthorized sender: ${sender} (ID: ${senderId})`);
+                console.log(`🚫 START_IGNORE: Blocked message from unauthorized sender: ${sender}`);
                 continue;
             }
             // -----------------------
@@ -98,14 +102,33 @@ async function startWhatsApp() {
             if (isAudio && msg.message.audioMessage.ptt) {
                 console.log("🎙️ Received Voice Note!");
                 try {
-                    mediaPath = await downloadMedia(msg.message.audioMessage, 'audio');
+                    mediaPath = await downloadMedia(msg.message.audioMessage, 'audio', 'ogg');
                     console.log(`✅ Saved voice note to ${mediaPath}`);
                     // For voice notes, we treat them as if they have the trigger implicitly 
                     // or we check if user said anything in text. Since it's PTT, we 
                     // usually just process it.
-                    text = "@gravity [VOICE]";
+                    text = (text || "") + " [VOICE]";
                 } catch (e) {
                     console.error("❌ Failed to download audio:", e.message);
+                }
+            } else if (isImage) {
+                console.log("🖼️ Received Image!");
+                try {
+                    mediaPath = await downloadMedia(msg.message.imageMessage, 'image', 'jpg');
+                    console.log(`✅ Saved image to ${mediaPath}`);
+                    text = (text || "") + " [IMAGE]";
+                } catch (e) {
+                    console.error("❌ Failed to download image:", e.message);
+                }
+            } else if (isDocument) {
+                console.log("📄 Received Document!");
+                try {
+                    const ext = path.extname(msg.message.documentMessage.fileName || "").replace('.', '') || 'bin';
+                    mediaPath = await downloadMedia(msg.message.documentMessage, 'document', ext);
+                    console.log(`✅ Saved document to ${mediaPath}`);
+                    text = (text || "") + " [FILE: " + (msg.message.documentMessage.fileName || "unknown") + "]";
+                } catch (e) {
+                    console.error("❌ Failed to download document:", e.message);
                 }
             }
 

@@ -129,6 +129,17 @@ Scan the QR code with WhatsApp (Linked Devices).
 
 ## 🛡️ Security
 
+### 🔒 User Whitelist
+By default, **ONLY your linked WhatsApp account** can control Satele. Messages from other numbers are ignored.
+To allow other numbers (e.g., your secondary phone):
+
+| Command | Description |
+| :--- | :--- |
+| `satele add-number <num>` | Allow a number (e.g. `38591...`). |
+| `satele remove-number <num>` | Remove a number from the allowed list. |
+| `satele users` | List all allowed numbers. |
+
+### 🔐 Architecture
 - **Sudo Access**: Satele runs as your user. It cannot run `sudo` unless you explicitly enable it via `satele setup-sudo`.
 - **Environment**: API Keys are stored in `.env` (git-ignored).
 - **Logs**: Activity is logged to `satele.log` (git-ignored).

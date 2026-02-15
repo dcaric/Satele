@@ -11,6 +11,8 @@ BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 PYTHON_CMD="python3"
 NODE_CMD="node"
 OS_TYPE=$(uname -s)
+# Force Linux path for logs to avoid Windows paths leaking in Docker
+export LOG_FILE="/tmp/satele_dcaric.log"
 
 # Helper Functions
 export REMOTE_BRIDGE_URL="http://localhost:8000"

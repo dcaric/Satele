@@ -28,5 +28,8 @@ COPY . .
 # Ensure satele script is executable
 RUN chmod +x satele
 
+# Add current directory to PATH so 'satele' command works globally
+ENV PATH="/app:${PATH}"
+
 # Default command (can be overridden by docker-compose)
 CMD ["./satele", "start"]

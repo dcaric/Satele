@@ -152,6 +152,12 @@ Logs: tail -f /tmp/satele_dcaric.log
 > *"Send me satele.log"*
 > *"Get config.json"*
 
+> *Sending a file to Satele:*
+> ![File Receive Example](images_examples/attachment_receive.png)
+
+> *Satele sending a file back:*
+> ![File Send Example](images_examples/attachment_sent.png)
+
 #### **Voice Interaction**
 > *(Send a Voice Note)*: "Check if the docker container is running and restart it if not."
 

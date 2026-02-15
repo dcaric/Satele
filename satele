@@ -1,13 +1,18 @@
 #!/bin/bash
 
 # Satele CLI - The Remote Bridge Controller
-# Usage: 
+# Usage:
 #   satele start    - Start the bridge services
 #   satele stop     - Stop the bridge services
 #   satele name     - Set the trigger word (e.g. satele name mark)
 #   satele status   - Check if services are running
 
-BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
+PYTHON_CMD="python3"
+NODE_CMD="node"
+OS_TYPE=$(uname -s)
+
+# Helper Functions
 export REMOTE_BRIDGE_URL="http://localhost:8000"
 export BRIDGE_SECRET_KEY="default-secret-key"
 
@@ -15,10 +20,15 @@ function update_env() {
     local KEY=$1
     local VAL=$2
     if [ ! -f "$BASE_DIR/.env" ]; then echo "$KEY=$VAL" > "$BASE_DIR/.env"; return; fi
-    
+
     if grep -q "^$KEY=" "$BASE_DIR/.env"; then
-        # Update existing (Mac sed requires empty string for inplace)
-        sed -i '' "s|^$KEY=.*|$KEY=$VAL|" "$BASE_DIR/.env"
+        if [ "$OS_TYPE" == "Darwin" ]; then
+            # macOS requires empty string for inplace no backup
+            sed -i '' "s|^$KEY=.*|$KEY=$VAL|" "$BASE_DIR/.env"
+        else
+            # Linux (GNU sed) standard
+            sed -i "s|^$KEY=.*|$KEY=$VAL|" "$BASE_DIR/.env"
+        fi
     else
         # Append new
         echo "$KEY=$VAL" >> "$BASE_DIR/.env"

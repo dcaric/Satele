@@ -81,12 +81,18 @@ def ai_interpret(instruction, media_path=None):
     if is_docker:
         env_context = """
     ENVIRONMENT CONTEXT:
-    - You are running inside a Linux Container (Docker).
-    - The User's HOST Home Directory is mounted at: /host_home
-    - Downloads: /host_home/Downloads
-    - Documents: /host_home/Documents
-    - If user asks for "Downloads", use `/host_home/Downloads`.
-    - Host Home: /host_home"""
+    - You are strictly running inside a Docker Container.
+    - INTERNAL CONTAINER ROOT: /app (Do not use this unless explicitly asked for internal files)
+    - REAL USER FILES ARE MOUNTED AT: /host_home
+    - USER HOME: /host_home
+    - DOWNLOADS: /host_home/Downloads
+    - DOCUMENTS: /host_home/Documents
+    
+    CRITICAL: 
+    - When user says "home" or "cd ~", you MUST use `/host_home`.
+    - When user asks for "current path", show both internal (`/app`) and external (`/host_home`) if relevant.
+    - IGNORE /root or /app/home.
+    """
         example_dest = "/host_home/Downloads"
     else:
         env_context = f"""

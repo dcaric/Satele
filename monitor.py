@@ -102,6 +102,32 @@ def ai_interpret(instruction, media_path=None):
             # Send everything to Gemini
             total_prompt = [prompt_text] + content_parts
             response = model.generate_content(total_prompt)
+            
+            # 📊 Token Tracking
+            try:
+                usage = response.usage_metadata
+                if usage:
+                    t_in = usage.prompt_token_count
+                    t_out = usage.candidates_token_count
+                    t_total = usage.total_token_count
+                    
+                    usage_file = "token_usage.json"
+                    data = {"total": 0, "in": 0, "out": 0}
+                    
+                    if os.path.exists(usage_file):
+                        with open(usage_file, "r") as f:
+                            try: data = json.load(f)
+                            except: pass
+                    
+                    data["total"] += t_total
+                    data["in"] += t_in
+                    data["out"] += t_out
+                    
+                    with open(usage_file, "w") as f:
+                        json.dump(data, f)
+            except Exception as e:
+                log(f"Token tracking error: {e}")
+
             text_response = response.text.replace('`', '').strip()
         except Exception as e:
             log(f"Gemini Error: {e}")

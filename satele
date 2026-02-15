@@ -127,6 +127,12 @@ function status() {
         echo "🧠 Brain: Local (Ollama: $MODEL)"
     else
         echo "🧠 Brain: Cloud (Gemini)"
+        if [ -f "token_usage.json" ]; then
+            TOTAL=$(python3 -c "import json; print(json.load(open('token_usage.json'))['total'])" 2>/dev/null)
+            if [ ! -z "$TOTAL" ]; then
+                echo "💸 Total Gemini Usage: $TOTAL tokens"
+            fi
+        fi
     fi
 }
 

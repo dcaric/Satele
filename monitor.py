@@ -9,6 +9,9 @@ from dotenv import load_dotenv
 # Load environment variables from .env
 load_dotenv()
 
+def log(msg):
+    print(f"[Monitor] {msg}")
+
 # Configuration
 BASE_URL = os.getenv("REMOTE_BRIDGE_URL", "http://localhost:8000")
 AUTH_TOKEN = os.getenv("BRIDGE_SECRET_KEY", "default-secret-key")
@@ -24,9 +27,6 @@ if GOOGLE_API_KEY:
 else:
     model = None
     log_brain = "⚠️ No GOOGLE_API_KEY found. Falling back to simple shell mapping."
-
-def log(msg):
-    print(f"[Monitor] {msg}")
 
 def run_shell(cmd):
     try:

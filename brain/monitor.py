@@ -129,7 +129,10 @@ def ai_interpret(instruction, media_path=None):
                 "stream": False
             }
             
-            resp = requests.post("http://localhost:11434/api/chat", json=payload, timeout=30)
+            ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+            if not ollama_host.startswith("http"): ollama_host = f"http://{ollama_host}"
+
+            resp = requests.post(f"{ollama_host}/api/chat", json=payload, timeout=30)
             if resp.status_code == 200:
                 text_response = resp.json().get("message", {}).get("content", "").strip()
             else:

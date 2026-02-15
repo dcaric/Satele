@@ -55,8 +55,15 @@ async function startWhatsApp() {
         if (connection === 'close') {
             const shouldReconnect = (lastDisconnect.error instanceof Boom) ?
                 lastDisconnect.error.output.statusCode !== DisconnectReason.loggedOut : true;
-            console.log('❌ Connection closed, reconnecting ', shouldReconnect);
-            if (shouldReconnect) startWhatsApp();
+
+            console.log('❌ Connection closed. Reconnecting:', shouldReconnect);
+
+            if (shouldReconnect) {
+                // Prevent aggressive flooding loop
+                const delay = 5000; // 5 seconds backoff
+                console.log(`⏳ Waiting ${delay}ms before reconnecting...`);
+                setTimeout(() => startWhatsApp(), delay);
+            }
         } else if (connection === 'open') {
             console.log('✅ WhatsApp connection opened successfully!');
         }

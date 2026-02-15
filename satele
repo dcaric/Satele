@@ -71,7 +71,7 @@ function start() {
     local ENV_FILE="$BASE_DIR/satele_cfg.env"
     
     # Check if ENV_FILE is a directory (Docker volume issue) and handle it
-    if [ -d "$ENV_FILE" ]; then
+    if [ ! -f "$ENV_FILE" ] && [ -d "$ENV_FILE" ]; then
         echo "⚠️ $ENV_FILE is a directory! (Likely Docker mounting issue)"
         echo "Please delete it on host and create a file: touch satele_cfg.env"
         exit 1
@@ -80,8 +80,6 @@ function start() {
     if [ ! -f "$ENV_FILE" ]; then
         if [ -f "$BASE_DIR/satele_cfg.env.example" ]; then
             cp "$BASE_DIR/satele_cfg.env.example" "$ENV_FILE"
-        elif [ -f "$BASE_DIR/.env" ]; then
-            cp "$BASE_DIR/.env" "$ENV_FILE"
         else
             touch "$ENV_FILE"
         fi
@@ -95,8 +93,7 @@ function start() {
     NAME=${BOT_TRIGGER:-"satele"}
 
     # Sync config to Brain subdirectory (for monitor.py)
-    # Check just in case brain/.env isn't mapped as a read-only volume
-    cp "$ENV_FILE" "$BASE_DIR/brain/.env" 2>/dev/null || echo "⚠️ Could not copy to brain/.env (might be read-only)"
+    cp "$ENV_FILE" "$BASE_DIR/brain/.env" 2>/dev/null
 
     # Determine Python Interpreter (venv or system)
     PYTHON_CMD="python3"
@@ -104,29 +101,31 @@ function start() {
         PYTHON_CMD="$BASE_DIR/venv/bin/python3"
     fi
 
-    # 1. Start FastAPI Server (If it exists)
+    # 1. Start FastAPI Server
     if [ -f "server/main.py" ]; then
-        if ! pgrep -f "Python server/main.py" > /dev/null; then
-            nohup "$PYTHON_CMD" server/main.py >> /tmp/satele_dcaric.log 2>&1 &
-            echo "✅ FastAPI Server Started"
+        if pgrep -f "Python server/main.py" > /dev/null; then
+            pkill -f "Python server/main.py"
+            sleep 0.5
         fi
+        nohup "$PYTHON_CMD" server/main.py >> /tmp/satele_dcaric.log 2>&1 &
+        echo "✅ FastAPI Server Started"
     fi
 
     # 2. Start WhatsApp Bridge
-    if ! pgrep -f "node whatsapp_bridge.js" > /dev/null; then
-        BOT_TRIGGER="$NAME" nohup node whatsapp_bridge.js >> /tmp/satele_dcaric.log 2>&1 &
-        echo "✅ WhatsApp Bridge Started"
-    else
-        echo "✅ WhatsApp Bridge already running."
+    if pgrep -f "node whatsapp_bridge.js" > /dev/null; then
+        pkill -f "node whatsapp_bridge.js"
+        sleep 0.5
     fi
+    BOT_TRIGGER="$NAME" nohup node whatsapp_bridge.js >> /tmp/satele_dcaric.log 2>&1 &
+    echo "✅ WhatsApp Bridge Started"
 
     # 3. Start AI Monitor
-    if ! pgrep -f "monitor.py" > /dev/null; then
-        nohup "$PYTHON_CMD" "$BASE_DIR/brain/monitor.py" >> /tmp/satele_dcaric.log 2>&1 &
-        echo "✅ AI Monitor (Brain) Started"
-    else
-        echo "✅ AI Monitor already running."
+    if pgrep -f "monitor.py" > /dev/null; then
+        pkill -f "monitor.py"
+        sleep 0.5
     fi
+    nohup "$PYTHON_CMD" "$BASE_DIR/brain/monitor.py" >> /tmp/satele_dcaric.log 2>&1 &
+    echo "✅ AI Monitor (Brain) Started"
     
     echo "✅ Satele is now active in the background."
     echo "📄 Check logs with: tail -f /tmp/satele_dcaric.log"
@@ -156,49 +155,55 @@ function status() {
     echo "📊 Satele Status:"
     
     # Check Processes
-    if lsof -i :8000 > /dev/null; then echo "🔹 FastAPI: RUNNING"; else echo "🔸 FastAPI: STOPPED"; fi
+    if lsof -i :8000 > /dev/null 2>&1 || pgrep -f "Python server/main.py" > /dev/null; then echo "🔹 FastAPI: RUNNING"; else echo "🔸 FastAPI: STOPPED"; fi
     if pgrep -f "whatsapp_bridge.js" > /dev/null; then echo "🔹 WhatsApp Bridge: RUNNING"; else echo "🔸 WhatsApp Bridge: STOPPED"; fi
     if pgrep -f "monitor.py" > /dev/null; then echo "🔹 AI Monitor: RUNNING"; else echo "🔸 AI Monitor: STOPPED"; fi
 
     # Get AI Provider and Model
-    local AI_PROVIDER=$(get_env_var "AI_PROVIDER" "gemini")
-    local GEMINI_MODEL=$(get_env_var "GEMINI_MODEL" "gemini-2.0-flash")
-    local OLLAMA_MODEL=$(get_env_var "OLLAMA_MODEL" "gemma:2b")
+    local AI_PROVIDER=$(grep "^AI_PROVIDER=" "$BASE_DIR/satele_cfg.env" | cut -d '=' -f2)
+    if [ -z "$AI_PROVIDER" ]; then AI_PROVIDER="gemini"; fi
+    
+    local GEMINI_MODEL=$(grep "^GEMINI_MODEL=" "$BASE_DIR/satele_cfg.env" | cut -d '=' -f2)
+    if [ -z "$GEMINI_MODEL" ]; then GEMINI_MODEL="gemini-2.0-flash"; fi
+    
+    local OLLAMA_MODEL=$(grep "^OLLAMA_MODEL=" "$BASE_DIR/satele_cfg.env" | cut -d '=' -f2)
+    if [ -z "$OLLAMA_MODEL" ]; then OLLAMA_MODEL="gemma:2b"; fi
 
     local BRAIN_STATUS=""
     if [ "$AI_PROVIDER" = "ollama" ]; then
         BRAIN_STATUS="🧠 Brain: Local (Ollama: $OLLAMA_MODEL)"
-    elif [ "$AI_PROVIDER" = "gemini" ]; then
-        # Check token usage if Gemini is active
+    else
+        # Cloud / Gemini
         local TOKEN_INFO=""
-        if [ -f "token_usage.json" ]; then
-            local TOTAL=$(grep -o '"total": [0-9]*' token_usage.json | cut -d ' ' -f2)
-            local IN=$(grep -o '"in": [0-9]*' token_usage.json | cut -d ' ' -f2)
-            local OUT=$(grep -o '"out": [0-9]*' token_usage.json | cut -d ' ' -f2)
+        if [ -f "$BASE_DIR/token_usage.json" ]; then
+            local TOTAL=$(grep -o '"total": [0-9]*' "$BASE_DIR/token_usage.json" | cut -d ' ' -f2)
+            local IN=$(grep -o '"in": [0-9]*' "$BASE_DIR/token_usage.json" | cut -d ' ' -f2)
+            local OUT=$(grep -o '"out": [0-9]*' "$BASE_DIR/token_usage.json" | cut -d ' ' -f2)
             
             # Cost calc
-            local P_IN=$(get_env_var "GEMINI_PRICE_IN" "0")
-            local P_OUT=$(get_env_var "GEMINI_PRICE_OUT" "0")
+            local P_IN=$(grep "^GEMINI_PRICE_IN=" "$BASE_DIR/satele_cfg.env" | cut -d '=' -f2)
+            if [ -z "$P_IN" ]; then P_IN="0"; fi
+            local P_OUT=$(grep "^GEMINI_PRICE_OUT=" "$BASE_DIR/satele_cfg.env" | cut -d '=' -f2)
+            if [ -z "$P_OUT" ]; then P_OUT="0"; fi
             
             # Simple bash float math (using awk)
             local COST=$(awk "BEGIN {printf \"%.4f\", ($IN/1000000 * $P_IN) + ($OUT/1000000 * $P_OUT)}")
-            
             TOKEN_INFO=" | Tokens: ${TOTAL} (\$${COST})"
         else
              TOKEN_INFO=" | Tokens: 0 (\$0.00)"
         fi
         BRAIN_STATUS="🧠 Brain: Cloud (Gemini: $GEMINI_MODEL)${TOKEN_INFO}"
-    else
-        BRAIN_STATUS="🧠 Brain: Unknown"
     fi
     echo "$BRAIN_STATUS"
     
     # Memory Check
     if [ -d "$BASE_DIR/brain/satele_memory" ]; then
-        # Use python to get count (might take ~1s)
-        if [ -d "$BASE_DIR/venv" ]; then source "$BASE_DIR/venv/bin/activate" >/dev/null 2>&1; fi
-        # Cd to BASE_DIR/brain to run python script correctly
-        local MEM_COUNT=$(cd "$BASE_DIR/brain" && python3 memory.py status 2>/dev/null)
+        # Determine Python Interpreter (venv or system)
+        local P_CMD="python3"
+        if [ -f "$BASE_DIR/venv/bin/python3" ]; then P_CMD="$BASE_DIR/venv/bin/python3"; fi
+        
+        local MEM_COUNT=$(cd "$BASE_DIR/brain" && "$P_CMD" memory.py status 2>/dev/null)
+        if [ -z "$MEM_COUNT" ]; then MEM_COUNT="0"; fi
         echo "📚 Memory: Active ($MEM_COUNT records)"
     else
         echo "📚 Memory: Empty/Not Instantiated"

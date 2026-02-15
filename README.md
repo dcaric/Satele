@@ -66,9 +66,6 @@ docker exec satele_bridge satele name M3
 **📊 Check Status:**
 docker exec satele_bridge satele status
 ```
-
-> *Satele Docker running on Windows:*
-> ![Windows folder listing Example](images_examples/win2.png)
 >
 > **Note:** When running in Docker, you must include the word **"host"** or **"working"** in your message (e.g., *"List my host downloads"*) to access your Windows files. Otherwise, Satele will look inside the container key.
 
@@ -82,6 +79,8 @@ Clone the repository to your desired location (e.g., `~/satele`):
 git clone https://github.com/dcaric/Satele.git ~/satele
 cd ~/satele
 ```
+> *Satele Docker running on Windows:*
+> ![Windows folder listing Example](images_examples/win2.png)
 
 ### 2. Install Dependencies
 Run the built-in setup command to install Node.js modules and Python virtual environment:

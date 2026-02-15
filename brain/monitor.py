@@ -117,6 +117,7 @@ def ai_interpret(instruction, media_path=None):
     4. Respond ONLY with safe bash commands, ONE PER LINE. No explanation.
     5. CWD: {os.getcwd()} | Home: {home_dir}
     6. FOR GUI APPS (Calculator, Chrome), use `sh: open -a "App Name"`.
+    7. IF USER WANTS TO SEND/UPLOAD A FILE (e.g. 'send me x'), USE: `UPLOAD: /absolute/path/to/x`
     {context_str}
     """
     
@@ -344,6 +345,10 @@ def process_instruction(instruction, media_path=None):
                 except: pass
 
             else:
+                # Clean up sloppy AI prefixes
+                if cmd.lower().startswith("sh:"):
+                    cmd = cmd[3:].strip()
+                
                 log(f"➡️ Running: {cmd}")
                 out = run_shell(cmd)
             

@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     git \
     procps \
+    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -25,8 +26,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy the rest of the application
 COPY . .
 
-# Ensure satele script is executable
-RUN chmod +x satele
+# Ensure satele script is executable and has correct line endings
+RUN chmod +x satele && dos2unix satele
 
 # Add current directory to PATH so 'satele' command works globally
 ENV PATH="/app:${PATH}"

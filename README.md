@@ -69,6 +69,15 @@ docker exec satele_bridge satele status
 >
 > **Note:** When running in Docker, you must include the word **"host"** or **"working"** in your message (e.g., *"List my host downloads"*) to access your Windows files. Otherwise, Satele will look inside the container key.
 
+### 4. Persistent Memory Features (New!)
+Satele now includes advanced state management to make your remote sessions feel like a real terminal:
+
+*   **Directory Persistence:** When you `cd` into a folder, Satele remembers it. Even if you restart the container or the service, she will start right back in that folder.
+*   **Docker Path Intelligence:** Running in Docker? Satele automatically maps `home`, `host`, and `~` to your mounted host files (`/host_home`).
+    *   Example: `win cd home` -> jumps to `C:\Users\You` (mapped as `/host_home`)
+    *   Example: `win cd Documents` -> jumps to `C:\Users\You\Documents`
+*   **Reboot Resilience:** The session state is saved to disk, so you never lose your place.
+
 ---
 
 ## 🚀 Installation & Setup

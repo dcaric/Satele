@@ -82,6 +82,9 @@ cd ~/satele
 > *Satele Docker running on Windows:*
 > ![Windows folder listing Example](images_examples/win2.png)
 
+> *Satele Docker running on Windows:*
+> ![Windows cd folder Example](images_examples/cd_folder.png)
+
 ### 2. Install Dependencies
 Run the built-in setup command to install Node.js modules and Python virtual environment:
 ```bash

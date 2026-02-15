@@ -68,7 +68,7 @@ docker exec satele_bridge satele status
 ```
 
 > *Satele Docker running on Windows:*
-> ![Windows folder listing Example](images_examples/win_docker.png)
+> ![Windows folder listing Example](images_examples/win2.png)
 >
 > **Note:** When running in Docker, you must include the word **"host"** or **"working"** in your message (e.g., *"List my host downloads"*) to access your Windows files. Otherwise, Satele will look inside the container key.
 

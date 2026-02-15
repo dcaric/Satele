@@ -264,8 +264,10 @@ def process_instruction(instruction, media_path=None):
             if not cmd or cmd.startswith("#"): continue
             
             # FILE UPLOAD INTERCEPT
-            if cmd.startswith("UPLOAD:"):
-                raw_path = cmd.split("UPLOAD:")[1].strip()
+            if cmd.upper().startswith("UPLOAD:"):
+                # Split case-insensitively but preserve path casing
+                parts = cmd.split(":", 1)
+                raw_path = parts[1].strip()
                 
                 # Expand wildcards first
                 if "*" in raw_path or "?" in raw_path:

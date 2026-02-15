@@ -68,7 +68,7 @@ docker exec satele_bridge satele status
 ```
 
 > *Satele Docker running on Windows:*
-> ![Windows Docker Example](images_examples/win_docker.png)
+> ![Windows folder listing Example](images_examples/win_docker.png)
 
 ---
 

@@ -353,6 +353,7 @@ Satele can be "upgraded" beyond simple shell commands by chaining system tools l
 ```bash
 sh: open -a Calculator; osascript -e 'tell application "Calculator" to activate'; sleep 2; osascript -e 'tell application "System Events" to keystroke "2+2="'; sleep 2; /usr/sbin/screencapture -x /Users/dcaric/Working/ml/AntigravityMessages/media/calc.png; echo "UPLOAD: /Users/dcaric/Working/ml/AntigravityMessages/media/calc.png"
 ```
+Command is complex but the point is that Satele orchestartor can be easily upgraded with skills and in that case user will send simple message
 
 **How it works:**
 1.  **Launch:** `open -a Calculator` opens the application.

@@ -470,7 +470,7 @@ function help() {
     echo "  satele gemini <model>    - Switch Gemini model (e.g. gemini-3-flash-preview)"
     echo "  satele add-number <num>  - Whitelist a number (e.g. 38591...)"
     echo "  satele remove-number <n> - Remove number from whitelist"
-    echo "  satele list-numbers      - Show allowed numbers"
+    echo "  satele users             - Show allowed numbers"
     echo "  ollama [model]      Manage local AI (e.g. 'satele ollama gemma3:4b')"
     echo "  ollama start        Switch to Local Ollama mode"
     echo "  ollama stop         Switch back to Cloud Gemini mode"
@@ -514,6 +514,9 @@ case "$1" in
         remove_number "$2"
         ;;
     list-numbers)
+        list_numbers
+        ;;
+    users)
         list_numbers
         ;;
     tokens)

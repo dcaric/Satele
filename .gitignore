@@ -30,4 +30,4 @@ brain/satele_memory/
 satele_cfg.env
 brain/.env
 
-.zip
+*.zip

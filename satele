@@ -255,7 +255,7 @@ function set_token_prices() {
     
     if [ -z "$PRICE_IN" ] || [ -z "$PRICE_OUT" ]; then
         echo "❌ Usage: satele tokens <price_in_per_1M> <price_out_per_1M>"
-        echo "💡 Example (Gemini Flash): satele tokens 0.075 0.30"
+        echo "💡 Example (Gemini 3 Flash): satele tokens 0.50 3.00"
         return 1
     fi
     
@@ -396,7 +396,7 @@ function help() {
     echo "  ollama [model]      Manage local AI (e.g. 'satele ollama gemma3:4b')"
     echo "  ollama start        Switch to Local Ollama mode"
     echo "  ollama stop         Switch back to Cloud Gemini mode"
-    echo "  tokens <in> <out>   Set price ($) per 1M tokens (e.g. 0.075 0.30)"
+    echo "  tokens <in> <out>   Set price ($) per 1M tokens (e.g. 0.50 3.00)"
     echo "  whatsapp            Launch interactive mode to link a device via QR code"
     echo "  setup-sudo          Enable passwordless sudo (Optional, use with caution)"
     echo "  install             Install the connection skill globally (for IDE)"

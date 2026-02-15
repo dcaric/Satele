@@ -235,6 +235,10 @@ Logs: tail -f /tmp/satele_dcaric.log
 #### **Direct Shell**
 > *"sh: ls -la /var/log"*
 
+#### **GUI Control**
+> *"Launch Calculator"*
+> *"sh: open -a 'Visual Studio Code'"* (macOS)
+
 ---
 
 ## 🛡️ Security
@@ -305,7 +309,42 @@ Satele is designed to be your **Personal Digital Bridge**. Its core mission is t
 *   **Remote Operations**: Need to start a long-running process, run a maintenance script, or check if a service is healthy while you're commuting? Satele executes these actions for you as if you were sitting right at your desk.
 *   **System Mastery**: From checking hardware health to managing your local network, Satele provides a voice-and-text interface for your entire home environment.
 
-### 🔭 The Future: A Gateway for Agents
-Satele is not just a tool; it's an **extensible platform**. While it currently acts as a bridge for commands and file transfers, it is architected to be a gateway for **multi-agent systems**. 
+### 🔭 Capabilities & Use Cases
+Satele has evolved into a uniquely powerful tool because she bridges the gap between **"Casual Mobile Interaction"** (WhatsApp) and **"Heavy Desktop Power"** (Shell/Filesystem).
 
-In the future, Satele can be expanded to leverage specialized AI agents—one might handle coding tasks, another could manage your calendar, and another could monitor your security cameras—all coordinated through a single, seamless WhatsApp conversation.
+Based on the code we have built, here is exactly what Satele is capable of and the best use cases for her:
+
+#### 1. The "Emergency" Remote Access
+This is the killer feature. You are away from your computer, and you realize you forgot something.
+*   **File Retrieval:** *"Satele, send me `proposal.pdf` from my Desktop."* (She uploads it to your WhatsApp).
+*   **Document Search:** *"Find the file I worked on yesterday called 'budget' in Documents."*
+*   **The "Did I leave it running?" Check:** *"Satele, check if the `training.py` script is still running."*
+
+#### 2. DevOps & Server Management (from Bed/Commute)
+Sysadmins and developers often need to poke their servers without opening a laptop and SSH-ing in.
+*   **Health Checks:** *"Status report."* (Can run `htop`, `df -h`, check load).
+*   **Restarting Services:** *"The web server is down. Restart Nginx."*
+*   **Docker Management:** *"List active containers."* / *"Restart the `db` container."*
+*   **Logs:** *"Show me the last 20 lines of the error log."*
+
+#### 3. Machine Learning & Long-Running Tasks
+Since you are doing ML work (Malgus, etc.), Satele is perfect for monitoring.
+*   **Notification:** You can script your training job to message you: `satele send "Training finished with 98% accuracy."`
+*   **Intervention:** *"The loss is exploring meant to infinity. Kill the training process!"* (Stop a runaway GPU bill remotely).
+
+#### 4. Home Automation & Media Server
+If you run this on a home server (like a Mac Mini or Raspberry Pi):
+*   **Downloads:** *"Download this YouTube video to my Plex folder: [Link]."* (If you install `yt-dlp`).
+*   **Network:** *"Who is connected to my Wi-Fi?"* (Using `arp-scan`).
+*   **Grid Control:** *"Wake up my Windows PC"* (Using `wakeonlan`).
+
+#### 5. Verified "Agentic" Workflow
+This is the most advanced use case. Satele is not just a bot; she is an **output channel for other AIs**.
+*   You are coding with **Antigravity** (me).
+*   You tell me: *"Run a long test suite. If it fails, ping me on WhatsApp via Satele."*
+*   I can use the `remote_bridge` skill to send you that alert. Satele becomes the "voice" of your entire digital workforce.
+
+### What makes her special?
+Unlike a standard SSH client (which is painful on mobile):
+*   **Context Aware:** She knows you are in Docker but want Windows files (`/host_home`).
+*   **Persistent:** She remembers you were in `~/Working/ml` yesterday.

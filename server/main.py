@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 import uuid
 
-app = FastAPI(title="Antigravity Remote Bridge Server")
+app = FastAPI(title="Remote Bridge Server")
 
 # Simple in-memory storage for tasks
 # In a real app, you'd use Redis or a database

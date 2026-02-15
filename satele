@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Satele CLI - The Antigravity Remote Bridge Controller
+# Satele CLI - The Remote Bridge Controller
 # Usage: 
 #   satele start    - Start the bridge services
 #   satele stop     - Stop the bridge services
@@ -209,7 +209,7 @@ function setup() {
 }
 
 function help() {
-    echo "🪐 Satele CLI - The Antigravity Remote Bridge Controller"
+    echo "🪐 Satele CLI - The Remote Bridge Controller"
     echo ""
     echo "Usage: satele <command> [arguments]"
     echo ""

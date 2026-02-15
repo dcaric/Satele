@@ -8,7 +8,7 @@ Satele is an advanced, multimodal bridge that connects your **WhatsApp** to your
 
 | OS | Support Level | Notes |
 | :--- | :--- | :--- |
-| **macOS** (Apple Silicon/Intel) | ✅ Full | Native support for all features including audio. |
+| **macOS** | ✅ Full | Native support for all features including audio. |
 | **Linux** (Ubuntu/Debian) | ✅ Full | Native support. Requires `nodejs`, `python3-venv`, `ffmpeg`. |
 | **Windows** | ✅ Full (Docker) | Runs via Docker Desktop. Zero dependency hell. |
 

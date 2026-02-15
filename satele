@@ -11,6 +11,31 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export REMOTE_BRIDGE_URL="http://localhost:8000"
 export BRIDGE_SECRET_KEY="default-secret-key"
 
+function update_env() {
+    local KEY=$1
+    local VAL=$2
+    if [ ! -f "$BASE_DIR/.env" ]; then echo "$KEY=$VAL" > "$BASE_DIR/.env"; return; fi
+    
+    if grep -q "^$KEY=" "$BASE_DIR/.env"; then
+        # Update existing (Mac sed requires empty string for inplace)
+        sed -i '' "s|^$KEY=.*|$KEY=$VAL|" "$BASE_DIR/.env"
+    else
+        # Append new
+        echo "$KEY=$VAL" >> "$BASE_DIR/.env"
+    fi
+}
+
+function get_env_var() {
+    local KEY=$1
+    local DEFAULT=$2
+    if [ -f "$BASE_DIR/.env" ]; then
+        local VAL=$(grep "^$KEY=" "$BASE_DIR/.env" | cut -d '=' -f2)
+        if [ -z "$VAL" ]; then echo "$DEFAULT"; else echo "$VAL"; fi
+    else
+        echo "$DEFAULT"
+    fi
+}
+
 function start() {
     echo "🪐 Starting Satele Services..."
     cd "$BASE_DIR"
@@ -185,6 +210,92 @@ function link_project() {
     echo "✅ Project Linked! You can now use '/satele' in this workspace."
 }
 
+function ollama_mgr() {
+    local SUB_CMD=$1
+    local EXTRA_ARG=$2
+    
+    cd "$BASE_DIR"
+
+    case "$SUB_CMD" in
+        "")
+            # Default: check/install
+            echo "🦙 Checking Ollama installation..."
+            if ! command -v ollama &> /dev/null; then
+                echo "❌ Ollama not found. Attempting to install..."
+                if command -v brew &> /dev/null; then
+                    echo "📦 Installing via Homebrew..."
+                    brew install ollama
+                else
+                    echo "📦 Installing via install.sh..."
+                    curl -fsSL https://ollama.com/install.sh | sh
+                fi
+                
+                if command -v ollama &> /dev/null; then
+                    echo "✅ Ollama installed successfully!"
+                    echo "⚠️  You may need to run 'ollama serve' in a separate terminal if the service doesn't start automatically."
+                else
+                    echo "❌ Installation failed. Please install Ollama manually: https://ollama.com/"
+                    exit 1
+                fi
+            else
+                echo "✅ Ollama is already installed."
+                ollama --version
+            fi
+            ;;
+            
+        start)
+            update_env "AI_PROVIDER" "ollama"
+            echo "✅ Switched AI Provider to: Local Ollama"
+            echo "🔄 Please restart Satele services: 'satele stop && satele start'"
+            ;;
+            
+        stop)
+            update_env "AI_PROVIDER" "gemini"
+            echo "✅ Switched AI Provider to: Cloud Gemini"
+            echo "🔄 Please restart Satele services: 'satele stop && satele start'"
+            ;;
+            
+        *)
+            # Assume it's a model name (e.g. gemma3:4b)
+            MODEL_NAME=$SUB_CMD
+            
+            if ! command -v ollama &> /dev/null; then
+                echo "❌ Ollama not installed. Run 'satele ollama' first."
+                exit 1
+            fi
+
+            echo "⬇️  Pulling base model: $MODEL_NAME..."
+            if ! ollama pull "$MODEL_NAME"; then
+                echo "❌ Failed to pull model '$MODEL_NAME'. Check model name."
+                exit 1
+            fi
+            
+            # Create Custom Modelfile
+            BOT_NAME=$(get_env_var "BOT_TRIGGER" "satele")
+            # Ensure bot name is lowercase/safe for model name
+            SAFE_BOT_NAME=$(echo "$BOT_NAME" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]_-')
+            CUSTOM_MODEL_NAME="satele-${SAFE_BOT_NAME}"
+            
+            echo "🛠️  Creating custom model '$CUSTOM_MODEL_NAME' based on $MODEL_NAME..."
+            
+            cat <<EOF > Modelfile
+FROM $MODEL_NAME
+SYSTEM "You are $BOT_NAME, a helpful AI assistant connected to a Mac terminal. You verify commands before executing. Respond with safe bash commands, ONE PER LINE. NO HTML."
+EOF
+            if ollama create "$CUSTOM_MODEL_NAME" -f Modelfile; then
+                rm Modelfile
+                update_env "OLLAMA_MODEL" "$CUSTOM_MODEL_NAME"
+                echo "✅ Custom model '$CUSTOM_MODEL_NAME' created and set as default."
+                echo "💡 To use it, run: 'satele ollama start'"
+            else
+                echo "❌ Failed to create custom model."
+                rm Modelfile
+                exit 1
+            fi
+            ;;
+    esac
+}
+
 function setup() {
     echo "🛠️  Setting up Satele Dependencies..."
     cd "$BASE_DIR"
@@ -221,6 +332,9 @@ function help() {
     echo "  kill                Force kill all related processes"
     echo "  name <name>         Set the bot's trigger name (default: satele)"
     echo "  geminikey <key>     Set your Google Gemini API Key"
+    echo "  ollama [model]      Manage local AI (e.g. 'satele ollama gemma3:4b')"
+    echo "  ollama start        Switch to Local Ollama mode"
+    echo "  ollama stop         Switch back to Cloud Gemini mode"
     echo "  whatsapp            Launch interactive mode to link a device via QR code"
     echo "  setup-sudo          Enable passwordless sudo (Optional, use with caution)"
     echo "  install             Install the connection skill globally (for IDE)"
@@ -247,6 +361,9 @@ case "$1" in
         pkill -f "node whatsapp_bridge.js"
         pkill -f "monitor.py"
         echo "💀 Force killed all processes."
+        ;;
+    ollama)
+        ollama_mgr "$2"
         ;;
     name)
         set_name "$2"

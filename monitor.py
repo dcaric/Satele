@@ -39,26 +39,24 @@ def run_shell(cmd):
 
 def ai_interpret(instruction, media_path=None):
     """
-    Uses Gemini to translate natural language (or voice) into a safe shell command.
+    Uses Gemini or Ollama to translate natural language (or voice) into a safe shell command.
     """
-    if not model:
-        # Simple fallback
-        if "disk" in instruction.lower(): return "df -h /"
-        return None
-
-    # Load audio if present
+    # Load audio if present (Gemini only supports this via API, Ollama likely plain text)
+    # We prepare content_parts but might not use it for Ollama
+    
     content_parts = [f"System Instruction: Translate to 1 safe macOS bash command.\nUser Input: {instruction}"]
     
     if media_path and os.path.exists(media_path):
         log(f"🎤 Uploading audio for analysis: {media_path}")
         try:
-            # For Gemini 1.5/2.0+ we usually upload the file or pass raw bytes
-            audio_file = genai.upload_file(path=media_path)
-            content_parts.append(audio_file)
+            if model: # Only try uploading if Gemini is configured?
+                # For Gemini 1.5/2.0+ we usually upload the file or pass raw bytes
+                audio_file = genai.upload_file(path=media_path)
+                content_parts.append(audio_file)
         except Exception as e:
             log(f"Audio upload error: {e}")
 
-    prompt = """
+    prompt_text = """
     You are an AI bridge between a Senior Developer's iPhone and their MacBook terminal.
     Your job is to translate the natural language instruction (which might be in the audio) into macOS bash commands.
     
@@ -70,21 +68,52 @@ def ai_interpret(instruction, media_path=None):
     5. CWD: {cwd}
     """.format(cwd=os.getcwd())
     
-    try:
-        # Send everything to Gemini
-        total_prompt = [prompt] + content_parts
-        response = model.generate_content(total_prompt)
-        text_response = response.text.replace('`', '').strip()
-        
-        # Handle cases where Gemini puts <br> instead of newline
-        text_response = text_response.replace('<br>', '\n').replace('<br/>', '\n')
-        
-        # Ensure we don't have empty lines
-        commands = [line.strip() for line in text_response.split('\n') if line.strip()]
-        return commands
-    except Exception as e:
-        log(f"AI Interpretation Error: {e}")
-        return None
+    provider = os.getenv("AI_PROVIDER", "gemini").lower()
+    
+    if provider == "ollama":
+        try:
+            model_name = os.getenv("OLLAMA_MODEL", "gemma:2b")
+            log(f"🦙 Using Ollama Model: {model_name}")
+            
+            payload = {
+                "model": model_name,
+                "prompt": f"System: {prompt_text}\nUser: {instruction}",
+                "stream": False
+            }
+            
+            resp = requests.post("http://localhost:11434/api/generate", json=payload, timeout=30)
+            if resp.status_code == 200:
+                text_response = resp.json().get("response", "").strip()
+            else:
+                log(f"Ollama Error: {resp.status_code} - {resp.text}")
+                return None
+
+        except Exception as e:
+            log(f"Ollama Connection Error: {e}")
+            return None
+    
+    else: # Default Gemini
+        if not model:
+            # simple fallback if gemini not configured
+            if "disk" in instruction.lower(): return ["df -h"]
+            return None
+            
+        try:
+            # Send everything to Gemini
+            total_prompt = [prompt_text] + content_parts
+            response = model.generate_content(total_prompt)
+            text_response = response.text.replace('`', '').strip()
+        except Exception as e:
+            log(f"Gemini Error: {e}")
+            return None
+
+    # Common Cleanup (for both providers)
+    # Handle cases where AI puts <br> instead of newline
+    text_response = text_response.replace('<br>', '\n').replace('<br/>', '\n')
+    
+    # Ensure we don't have empty lines
+    commands = [line.strip() for line in text_response.split('\n') if line.strip()]
+    return commands
 
 def process_instruction(instruction, media_path=None):
     log(f"📩 Processing: {instruction} (Media: {media_path is not None})")

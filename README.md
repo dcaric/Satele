@@ -9,8 +9,64 @@ Satele is an advanced, multimodal bridge that connects your **WhatsApp** to your
 | OS | Support Level | Notes |
 | :--- | :--- | :--- |
 | **macOS** (Silicon/Intel) | ✅ Full | Native support for all features including audio. |
-| **Linux** (Ubuntu/Debian) | ✅ Full | Requires `nodejs`, `python3-venv`, and `ffmpeg` installed. |
-| **Windows** | ❌ No | Only via WSL2 (treat as Linux). |
+| **Linux** (Ubuntu/Debian) | ✅ Full | Native support. Requires `nodejs`, `python3-venv`, `ffmpeg`. |
+| **Windows** | ✅ Full (Docker) | Runs via Docker Desktop. Zero dependency hell. |
+
+---
+
+## 🐳 Docker Deployment (Better for Windows)
+
+Using Docker is the recommended way to run Satele on Windows or for clean, isolated deployments.
+
+### 1. Prerequisite
+*   Install [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+*   **For Local AI**: Install [Ollama for Windows](https://ollama.com/) (optional, but recommended for speed).
+
+### 2. Quick Start
+```bash
+# 1. Clone Repo
+git clone https://github.com/dcaric/Satele.git ~/satele
+cd ~/satele
+
+# 2. Fix Config (Important for Windows)
+# Docker mounts satele_cfg.env as a file. If it doesn't exist, Docker creates a directory (error).
+touch satele_cfg.env 
+
+# 3. Launch
+docker-compose up -d
+```
+
+### 3. Configuring Satele in Docker
+Since Satele runs inside a container, you use `docker exec` to send configuration commands.
+
+**📱 Link WhatsApp:**
+```bash
+docker exec -it satele_bridge satele whatsapp
+# (Scan the QR code shown in terminal)
+```
+
+**🧠 Set AI Keys (Gemini):**
+```bash
+docker exec satele_bridge satele geminikey YOUR_API_KEY_HERE
+```
+
+**🦙 Configure Ollama (Local AI):**
+Satele Docker is pre-configured to talk to your host's Ollama at `host.docker.internal:11434`.
+1. Ensure Ollama is running on Windows.
+2. In Docker, switch to Ollama mode:
+   ```bash
+   docker exec satele_bridge satele ollama start
+   ```
+
+**🤖 Set Bot Name:**
+```bash
+docker exec satele_bridge satele name M3
+```
+
+**📊 Check Status:**
+```bash
+docker exec satele_bridge satele status
+```
 
 ---
 

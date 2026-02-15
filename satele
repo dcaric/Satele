@@ -491,19 +491,29 @@ function setup() {
     fi
     
     # 2. Python (Brain)
-    if [ ! -d "venv" ]; then
+    if [ ! -d "$BASE_DIR/venv" ]; then
         echo "🐍 Creating Python Virtual Environment..."
-        python3 -m venv venv
+        python3 -m venv "$BASE_DIR/venv"
     fi
     
     echo "📦 Installing Python packages..."
-    source venv/bin/activate
+    # Always try to activate using absolute path
+    if [ -f "$BASE_DIR/venv/bin/activate" ]; then
+        source "$BASE_DIR/venv/bin/activate"
+    else
+        echo "❌ Critical Error: Virtual Environment creation failed!"
+        exit 1
+    fi
     
     # Upgrade pip first to handle modern packages better
-    pip install --upgrade pip --quiet
-    
-    # Use extended timeout for heavy packages like chromadb
-    pip install --default-timeout=100 -r requirements.txt --quiet
+    if command -v pip >/dev/null; then
+        pip install --upgrade pip --quiet
+        # Use extended timeout for heavy packages like chromadb
+        pip install --default-timeout=100 -r requirements.txt --quiet
+    else
+        echo "❌ Error: 'pip' command not found inside venv!"
+        exit 1
+    fi
     
     echo "✅ Setup Complete! You can now run 'satele start'."
 }

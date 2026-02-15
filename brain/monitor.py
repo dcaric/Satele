@@ -300,7 +300,16 @@ def process_instruction(instruction, media_path=None):
                         if (target.startswith('"') and target.endswith('"')) or \
                            (target.startswith("'") and target.endswith("'")):
                             target = target[1:-1]
-                        target = os.path.expanduser(target)
+                        
+                        # --- DOCKER PATH CORRECTION ---
+                        # If user types 'cd home' or 'cd host' inside docker, force it to /host_home
+                        if os.path.exists("/host_home"):
+                            if target.lower() in ["home", "host", "~", "users"]:
+                                target = "/host_home"
+                            elif target.lower() == "root":
+                                target = "/"
+                        else:
+                             target = os.path.expanduser(target)
                     
                     os.chdir(target)
                     out = f"📂 Directory changed to: {os.getcwd()}"

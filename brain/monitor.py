@@ -253,7 +253,10 @@ def process_instruction(instruction, media_path=None):
     # 1. Direct Shell Access (Text only - supports multi-command with ;)
     if not media_path and instruction.lower().startswith("sh:"):
         cmd = instruction[3:].strip()
-        return f"Executing Raw: {cmd}\n---\n{run_shell(cmd)}"
+        out = run_shell(cmd)
+        if out.strip().upper().startswith("UPLOAD:"):
+            return out.strip()
+        return f"Executing Raw: {cmd}\n---\n{out}"
 
     # 2. AI Interpretation (Text or Voice) -> Returns LIST of commands
     command_list = ai_interpret(instruction, media_path)

@@ -141,12 +141,28 @@ def ai_interpret(instruction, media_path=None):
             return None
 
     # Common Cleanup (for both providers)
+    if not text_response: return []
+    
     # Handle cases where AI puts <br> instead of newline
     text_response = text_response.replace('<br>', '\n').replace('<br/>', '\n')
+
+    # clean markdown code blocks
+    lines = text_response.split('\n')
+    cleaned_lines = []
     
-    # Ensure we don't have empty lines
-    commands = [line.strip() for line in text_response.split('\n') if line.strip()]
-    return commands
+    for line in lines:
+        line = line.strip()
+        # Remove markdown fences
+        if line.startswith("```"): continue
+        # Remove single backticks
+        line = line.replace("`", "")
+        # Remove "bash" or "sh" if it's the only content (common artifact)
+        if line.lower() in ["bash", "sh", "shell", "zsh"]: continue
+        
+        if line:
+            cleaned_lines.append(line)
+            
+    return cleaned_lines
 
 def process_instruction(instruction, media_path=None):
     log(f"📩 Processing: {instruction} (Media: {media_path is not None})")

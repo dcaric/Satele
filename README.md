@@ -108,6 +108,39 @@ Scan the QR code with WhatsApp (Linked Devices).
 | `satele name <name>` | Sets a custom wake-word (e.g. `satele name M1`). Useful for multi-bot setups. |
 | `satele setup-sudo` | Configures passwordless `sudo` for Satele (Advanced). |
 
+### 📖 Complete CLI Help
+View all available commands by running `satele help`:
+
+```text
+🪐 Satele CLI - The Remote Bridge Controller
+
+Usage: satele <command> [arguments]
+
+Commands:
+  setup               Install dependencies (Node.js & Python)
+  start               Start the bridge services in the background
+  stop                Stop all running bridge services
+  status              Check if services are running
+  kill                Force kill all related processes
+  name <name>         Set the bot's trigger name (default: satele)
+  tokens <in> <out>   Set pricing for Gemini (e.g. 0.50 3.00)
+  gemini <model>      Switch Gemini model (e.g. gemini-3-flash-preview)
+  add-number <num>    Whitelist a number (e.g. 38591...)
+  remove-number <n>   Remove number from whitelist
+  users               Show allowed numbers
+  memory              Show long-term memory status
+  ollama [model]      Manage local AI (e.g. 'satele ollama gemma3:4b')
+  ollama start        Switch to Local Ollama mode
+  ollama stop         Switch back to Cloud Gemini mode
+  whatsapp            Launch interactive mode to link a device via QR code
+  setup-sudo          Enable passwordless sudo (Optional, use with caution)
+  install             Install the connection skill globally (for IDE)
+  link                Enable remote control in the current project
+  help                Show this message
+
+Logs: tail -f /tmp/satele_dcaric.log
+```
+
 ### 🎙️ 3. Remote Capabilities (WhatsApp)
 
 #### **System Checks**
@@ -141,7 +174,7 @@ To allow other numbers (e.g., your secondary phone):
 
 ### 🔐 Architecture
 - **Sudo Access**: Satele runs as your user. It cannot run `sudo` unless you explicitly enable it via `satele setup-sudo`.
-- **Environment**: API Keys are stored in `.env` (git-ignored).
+- **Environment**: API Keys are stored in `satele_cfg.env` (git-ignored).
 - **Logs**: Activity is logged to `satele.log` (git-ignored).
 - **WhatsApp**: Uses end-to-end encryption via Multi-Device API.
 

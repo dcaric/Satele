@@ -132,42 +132,64 @@ function status() {
     if pgrep -f "whatsapp_bridge.js" > /dev/null; then echo "🔹 WhatsApp Bridge: RUNNING"; else echo "🔸 WhatsApp Bridge: STOPPED"; fi
     if pgrep -f "monitor.py" > /dev/null; then echo "🔹 AI Monitor: RUNNING"; else echo "🔸 AI Monitor: STOPPED"; fi
 
-    # Check Configuration
-    PROVIDER=$(get_env_var "AI_PROVIDER" "gemini")
-    
-    if [ "$PROVIDER" == "ollama" ]; then
-        MODEL=$(get_env_var "OLLAMA_MODEL" "unknown")
-        echo "🧠 Brain: Local (Ollama: $MODEL)"
-    else
-        MODEL=$(get_env_var "GEMINI_MODEL" "gemini-2.0-flash")
-        echo "🧠 Brain: Cloud (Gemini: $MODEL)"
+    # Get AI Provider and Model
+    local AI_PROVIDER=$(get_env_var "AI_PROVIDER" "gemini")
+    local GEMINI_MODEL=$(get_env_var "GEMINI_MODEL" "gemini-2.0-flash")
+    local OLLAMA_MODEL=$(get_env_var "OLLAMA_MODEL" "gemma:2b")
+
+    local BRAIN_STATUS=""
+    if [ "$AI_PROVIDER" = "ollama" ]; then
+        BRAIN_STATUS="🧠 Brain: Local (Ollama: $OLLAMA_MODEL)"
+    elif [ "$AI_PROVIDER" = "gemini" ]; then
+        # Check token usage if Gemini is active
+        local TOKEN_INFO=""
         if [ -f "token_usage.json" ]; then
-            # Load Prices
-            P_IN=$(get_env_var "GEMINI_PRICE_IN" "0")
-            P_OUT=$(get_env_var "GEMINI_PRICE_OUT" "0")
+            local TOTAL=$(grep -o '"total": [0-9]*' token_usage.json | cut -d ' ' -f2)
+            local IN=$(grep -o '"in": [0-9]*' token_usage.json | cut -d ' ' -f2)
+            local OUT=$(grep -o '"out": [0-9]*' token_usage.json | cut -d ' ' -f2)
             
-            # Execute Python Calculation
-            python3 -c "
-import json, os
-try:
-    data = json.load(open('token_usage.json'))
-    t_in = data.get('in', 0)
-    t_out = data.get('out', 0)
-    t_total = data.get('total', 0)
-    
-    p_in = float('$P_IN')
-    p_out = float('$P_OUT')
-    
-    cost = (t_in * p_in) + (t_out * p_out)
-    
-    print(f'📥 Input: {t_in:,} | 📤 Output: {t_out:,}')
-    print(f'💸 Total Gemini Usage: {t_total:,} tokens')
-    if cost > 0:
-        print(f'💰 Estimated Cost: \${cost:.6f}')
-except Exception as e:
-    pass
-"
+            # Cost calc
+            local P_IN=$(get_env_var "GEMINI_PRICE_IN" "0")
+            local P_OUT=$(get_env_var "GEMINI_PRICE_OUT" "0")
+            
+            # Simple bash float math (using awk)
+            local COST=$(awk "BEGIN {printf \"%.4f\", ($IN/1000000 * $P_IN) + ($OUT/1000000 * $P_OUT)}")
+            
+            TOKEN_INFO=" | Tokens: ${TOTAL} (\$${COST})"
+        else
+             TOKEN_INFO=" | Tokens: 0 (\$0.00)"
         fi
+        BRAIN_STATUS="🧠 Brain: Cloud (Gemini: $GEMINI_MODEL)${TOKEN_INFO}"
+    else
+        BRAIN_STATUS="🧠 Brain: Unknown"
+    fi
+    echo "$BRAIN_STATUS"
+    
+    # Memory Check
+    if [ -d "satele_memory" ]; then
+        # Use python to get count (might take ~1s)
+        if [ -d "venv" ]; then source venv/bin/activate >/dev/null 2>&1; fi
+        local MEM_COUNT=$(python3 memory.py status 2>/dev/null)
+        echo "📚 Memory: Active ($MEM_COUNT records)"
+    else
+        echo "📚 Memory: Empty/Not Instantiated"
+    fi
+    echo ""
+}
+
+function memory_status() {
+    echo "🧠 Satele Long-Term Memory Inspection"
+    cd "$BASE_DIR"
+    if [ -d "satele_memory" ]; then
+        echo "📂 DB Path: $BASE_DIR/satele_memory"
+        if [ -d "venv" ]; then source venv/bin/activate; fi
+        echo "⏳ Calculating stats..."
+        local COUNT=$(python3 memory.py status)
+        echo "📊 Total Embeddings: $COUNT"
+        echo "💡 Tip: Memory grows automatically with every interaction."
+    else
+        echo "🔸 Memory database not found."
+        echo "   (It will be created automatically on first AI interaction)"
     fi
 }
 
@@ -471,6 +493,7 @@ function help() {
     echo "  add-number <num>    Whitelist a number (e.g. 38591...)"
     echo "  remove-number <n>   Remove number from whitelist"
     echo "  users               Show allowed numbers"
+    echo "  memory              Show long-term memory status"
     echo "  ollama [model]      Manage local AI (e.g. 'satele ollama gemma3:4b')"
     echo "  ollama start        Switch to Local Ollama mode"
     echo "  ollama stop         Switch back to Cloud Gemini mode"
@@ -518,6 +541,9 @@ case "$1" in
         ;;
     users)
         list_numbers
+        ;;
+    memory)
+        memory_status
         ;;
     tokens)
         set_token_prices "$2" "$3"

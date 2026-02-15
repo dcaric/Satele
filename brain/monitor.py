@@ -76,18 +76,25 @@ def ai_interpret(instruction, media_path=None):
             log(f"Context error: {e}")
     
     prompt_text = f"""
-    You are an AI bridge. You translate natural language to safe macOS bash commands.
+    You are an AI bridge. You translate natural language to safe bash commands.
+    
+    ENVIRONMENT CONTEXT:
+    - You are running inside a Linux Container.
+    - The User's HOST Home Directory is mounted at: /host_home
+    - Downloads: /host_home/Downloads
+    - Documents: /host_home/Documents
+    - If user asks for "Downloads", use `/host_home/Downloads`.
     
     CRITICAL FILE HANDLING RULES:
     1. If the user sends a file/image and says 'save it' or similar:
        - THE SOURCE IS: '{media_path}'
-       - THE DESTINATION IS: Whatever path the user mentioned (e.g. {home_dir}/Downloads).
+       - THE DESTINATION IS: Whatever path the user mentioned (e.g /host_home/Downloads).
        - COMMAND MUST BE: `mv {media_path} <destination>`
     
     2. NEVER SWAP THE DIRECTION. The file at {media_path} is the one you must move.
-    3. Use absolute paths or {home_dir} (~).
+    3. Use absolute paths.
     4. Respond ONLY with safe bash commands, ONE PER LINE. No explanation.
-    5. CWD: {os.getcwd()} | Home: {home_dir}
+    5. CWD: {os.getcwd()} | Home: {home_dir} | Host Home: /host_home
     {context_str}
     """
     

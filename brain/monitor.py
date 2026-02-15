@@ -333,6 +333,13 @@ def process_instruction(instruction, media_path=None):
                     log(f"✅ Persistent CD: {os.getcwd()}")
                 except Exception as e:
                      out = f"❌ CD Failed: {e}"
+                
+                # Save CWD for persistence across restarts
+                try:
+                    with open(os.path.join(os.path.dirname(__file__), ".satele_cwd"), "w") as f:
+                        f.write(os.getcwd())
+                except: pass
+
             else:
                 log(f"➡️ Running: {cmd}")
                 out = run_shell(cmd)
@@ -349,6 +356,19 @@ def process_instruction(instruction, media_path=None):
 
 def monitor_loop():
     log(f"🚀 Autonomous Monitoring Started... ({log_brain})")
+    
+    # RESTORE SESSION
+    try:
+        cwd_file = os.path.join(os.path.dirname(__file__), ".satele_cwd")
+        if os.path.exists(cwd_file):
+            with open(cwd_file, "r") as f:
+                last_wd = f.read().strip()
+                if os.path.isdir(last_wd):
+                    os.chdir(last_wd)
+                    log(f"🔄 Restored Session CWD: {last_wd}")
+    except Exception as e:
+        log(f"⚠️ Failed to restore session: {e}")
+
     while True:
         try:
             response = requests.get(

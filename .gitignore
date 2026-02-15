@@ -11,7 +11,7 @@ __pycache__/
 node_modules/
 
 # Logs & Data
-satele.log
+*.log
 token_usage.json
 media/
 .mudslide_cache/
@@ -26,5 +26,5 @@ media/
 # Agent
 .agent/memory/
 .npm_cache/
-bridge.log
+
 .DS_Store

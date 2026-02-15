@@ -66,8 +66,11 @@ docker exec satele_bridge satele name M3
 **📊 Check Status:**
 docker exec satele_bridge satele status
 ```
->
 > **Note:** When running in Docker, you must include the word **"host"** or **"working"** in your message (e.g., *"List my host downloads"*) to access your Windows files. Otherwise, Satele will look inside the container key.
+
+> *Satele Docker running on Windows:*
+> ![Windows folder listing Example](images_examples/win2.png)
+> ![Windows cd folder Example](images_examples/cd_folder.png)
 
 ### 4. Persistent Memory Features (New!)
 Satele now includes advanced state management to make your remote sessions feel like a real terminal:
@@ -88,11 +91,6 @@ Clone the repository to your desired location (e.g., `~/satele`):
 git clone https://github.com/dcaric/Satele.git ~/satele
 cd ~/satele
 ```
-> *Satele Docker running on Windows:*
-> ![Windows folder listing Example](images_examples/win2.png)
-
-> *Satele Docker running on Windows:*
-> ![Windows cd folder Example](images_examples/cd_folder.png)
 
 ### 2. Install Dependencies
 Run the built-in setup command to install Node.js modules and Python virtual environment:
@@ -293,7 +291,6 @@ Once linked, your AI Code Assistant will see the new tools. You can ask it:
 
 Or use it programmatically:
 ```python
-```python
 # The agent will see this tool available:
 send_whatsapp_message("Hey! The long training job just finished with accuracy 98%.")
 ```
@@ -366,7 +363,3 @@ sh: open -a Calculator; osascript -e 'tell application "Calculator" to activate'
 
 > *Result of the automation script:*
 > ![Calculator Screenshot Example](images_examples/calculator.png)
-
----
-
-## 🚀 Installation & Setup

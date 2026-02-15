@@ -19,19 +19,30 @@ export BRIDGE_SECRET_KEY="default-secret-key"
 function update_env() {
     local KEY=$1
     local VAL=$2
-    if [ ! -f "$BASE_DIR/satele_cfg.env" ]; then echo "$KEY=$VAL" > "$BASE_DIR/satele_cfg.env"; return; fi
-
-    if grep -q "^$KEY=" "$BASE_DIR/satele_cfg.env"; then
-        if [ "$OS_TYPE" == "Darwin" ]; then
-            # macOS requires empty string for inplace no backup
-            sed -i '' "s|^$KEY=.*|$KEY=$VAL|" "$BASE_DIR/satele_cfg.env"
+    local ENV_FILE="$BASE_DIR/satele_cfg.env"
+    
+    # If missing, try to initialize
+    if [ ! -f "$ENV_FILE" ]; then
+        if [ -f "$BASE_DIR/satele_cfg.env.example" ]; then
+            cp "$BASE_DIR/satele_cfg.env.example" "$ENV_FILE"
+            echo "📝 Initialized satele_cfg.env from example."
+        elif [ -f "$BASE_DIR/.env" ]; then
+            # Migrate basic vars if old .env exists
+            cp "$BASE_DIR/.env" "$ENV_FILE"
+            echo "📝 Migrated config from old .env file."
         else
-            # Linux (GNU sed) standard
-            sed -i "s|^$KEY=.*|$KEY=$VAL|" "$BASE_DIR/satele_cfg.env"
+            touch "$ENV_FILE"
+        fi
+    fi
+
+    if grep -q "^$KEY=" "$ENV_FILE"; then
+        if [ "$OS_TYPE" == "Darwin" ]; then
+            sed -i '' "s|^$KEY=.*|$KEY=$VAL|" "$ENV_FILE"
+        else
+            sed -i "s|^$KEY=.*|$KEY=$VAL|" "$ENV_FILE"
         fi
     else
-        # Append new
-        echo "$KEY=$VAL" >> "$BASE_DIR/satele_cfg.env"
+        echo "$KEY=$VAL" >> "$ENV_FILE"
     fi
 }
 
@@ -108,20 +119,9 @@ function set_name() {
         exit 1
     fi
     
-    # Update satele_cfg.env file
-    if [ -f "$BASE_DIR/satele_cfg.env" ]; then
-        if grep -q "BOT_TRIGGER=" "$BASE_DIR/satele_cfg.env"; then
-            # Replace existing
-            sed -i '' "s/BOT_TRIGGER=.*/BOT_TRIGGER=$NEW_NAME/" "$BASE_DIR/satele_cfg.env"
-        else
-            # Append new
-            echo "BOT_TRIGGER=$NEW_NAME" >> "$BASE_DIR/satele_cfg.env"
-        fi
-        echo "✅ Trigger name updated to: $NEW_NAME"
-        echo "🔄 Note: You must restart satele (stop/start) to apply the change."
-    else
-        echo "❌ satele_cfg.env file not found. Run start first."
-    fi
+    update_env "BOT_TRIGGER" "$NEW_NAME"
+    echo "✅ Trigger name updated to: $NEW_NAME"
+    echo "🔄 Note: You must restart satele (stop/start) to apply the change."
 }
 
 function status() {
@@ -510,7 +510,7 @@ function help() {
     echo "  help                Show this message"
     echo ""
     echo "Logs:"
-    echo "  tail -f $BASE_DIR//tmp/satele_dcaric.log"
+    echo "  tail -f /tmp/satele_dcaric.log"
 }
 
 # Command Router

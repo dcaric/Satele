@@ -304,8 +304,8 @@ function link_project() {
     mkdir -p "$TARGET_DIR/.agent/workflows"
     
     # Symlink the Skills
-    ln -sf "$GLOBAL_SKILL_DIR/skills/satele_control" "$TARGET_DIR/.agent/skills/"
-    echo "   - Linked Skill: satele_control"
+    ln -sf "$GLOBAL_SKILL_DIR/skills/remote_bridge" "$TARGET_DIR/.agent/skills/"
+    echo "   - Linked Skill: remote_bridge"
     
     # Symlink the Workflows
     ln -sf "$GLOBAL_SKILL_DIR/workflows/satele.md" "$TARGET_DIR/.agent/workflows/satele.md"

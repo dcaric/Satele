@@ -27,5 +27,6 @@ media/
 satele_memory/
 brain/satele_memory/
 satele_cfg.env
+brain/.env
 
 .zip

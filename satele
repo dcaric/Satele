@@ -83,7 +83,7 @@ function start() {
     # 3. Start AI Monitor
     if ! pgrep -f "monitor.py" > /dev/null; then
         source venv/bin/activate
-        nohup python3 monitor.py >> /tmp/satele_dcaric.log 2>&1 &
+        nohup python3 "$BASE_DIR/brain/monitor.py" >> /tmp/satele_dcaric.log 2>&1 &
         echo "✅ AI Monitor (Brain) Started"
     else
         echo "✅ AI Monitor already running."

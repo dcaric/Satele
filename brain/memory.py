@@ -1,7 +1,32 @@
+import os
+import pathlib
+import errno
+
+# --- CRITICAL PATCH FOR MACOS PERMISSIONS ---
+# Pydantic (used by ChromaDB) tries to stat() all .env files in parent dirs.
+# The root .env in this folder is 'cursed' and throws PermissionError.
+# We monkey-patch os.stat and pathlib.Path.stat to pretend any .env doesn't exist.
+orig_os_stat = os.stat
+def patched_os_stat(path, *args, **kwargs):
+    if str(path).endswith(".env"):
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), str(path))
+    return orig_os_stat(path, *args, **kwargs)
+os.stat = patched_os_stat
+
+orig_path_stat = pathlib.Path.stat
+def patched_path_stat(self, *args, **kwargs):
+    if str(self).endswith(".env"):
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), str(self))
+    return orig_path_stat(self, *args, **kwargs)
+pathlib.Path.stat = patched_path_stat
+# --------------------------------------------
+
 import chromadb
 import uuid
 import datetime
-import os
+import requests
+import json
+import platform
 
 class Memory:
     def __init__(self, db_path="satele_memory", silent=False):

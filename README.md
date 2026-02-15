@@ -64,9 +64,11 @@ docker exec satele_bridge satele name M3
 ```
 
 **📊 Check Status:**
-```bash
 docker exec satele_bridge satele status
 ```
+
+> *Satele Docker running on Windows:*
+> ![Windows Docker Example](images_examples/win_docker.png)
 
 ---
 

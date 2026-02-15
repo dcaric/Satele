@@ -281,8 +281,30 @@ def process_instruction(instruction, media_path=None):
                 else:
                     return f"UPLOAD: {raw_path}"
             
-            log(f"➡️ Running: {cmd}")
-            out = run_shell(cmd)
+            # Intercept 'cd' to persist directory changes in the Python process
+            if cmd.strip().startswith("cd"):
+                try:
+                    # Parse path
+                    parts = cmd.strip().split(maxsplit=1)
+                    if len(parts) == 1:
+                        target = os.path.expanduser("~")
+                    else:
+                        target = parts[1].strip()
+                        # Clean quotes
+                        if (target.startswith('"') and target.endswith('"')) or \
+                           (target.startswith("'") and target.endswith("'")):
+                            target = target[1:-1]
+                        target = os.path.expanduser(target)
+                    
+                    os.chdir(target)
+                    out = f"📂 Directory changed to: {os.getcwd()}"
+                    log(f"✅ Persistent CD: {os.getcwd()}")
+                except Exception as e:
+                     out = f"❌ CD Failed: {e}"
+            else:
+                log(f"➡️ Running: {cmd}")
+                out = run_shell(cmd)
+            
             full_output.append(f"> {cmd}\n{out}")
             
         return "\n\n".join(full_output)

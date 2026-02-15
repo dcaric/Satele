@@ -2,10 +2,11 @@ import os
 import pathlib
 import errno
 
-# --- CRITICAL PATCH FOR MACOS PERMISSIONS ---
+# --- CRITICAL PATCH FOR SYSTEM PERMISSIONS (MACOS/LINUX) ---
 # Pydantic (used by ChromaDB) tries to stat() all .env files in parent dirs.
-# The root .env in this folder is 'cursed' and throws PermissionError.
+# The root .env in this folder sometimes throws PermissionError or is blocked.
 # We monkey-patch os.stat and pathlib.Path.stat to pretend any .env doesn't exist.
+# This logic applies to ALL systems to prevent permissions crashes.
 orig_os_stat = os.stat
 def patched_os_stat(path, *args, **kwargs):
     if str(path).endswith(".env"):

@@ -113,9 +113,21 @@ function set_name() {
 
 function status() {
     echo "📊 Satele Status:"
+    
+    # Check Processes
     if lsof -i :8000 > /dev/null; then echo "🔹 FastAPI: RUNNING"; else echo "🔸 FastAPI: STOPPED"; fi
     if pgrep -f "whatsapp_bridge.js" > /dev/null; then echo "🔹 WhatsApp Bridge: RUNNING"; else echo "🔸 WhatsApp Bridge: STOPPED"; fi
     if pgrep -f "monitor.py" > /dev/null; then echo "🔹 AI Monitor: RUNNING"; else echo "🔸 AI Monitor: STOPPED"; fi
+
+    # Check Configuration
+    PROVIDER=$(get_env_var "AI_PROVIDER" "gemini")
+    
+    if [ "$PROVIDER" == "ollama" ]; then
+        MODEL=$(get_env_var "OLLAMA_MODEL" "unknown")
+        echo "🧠 Brain: Local (Ollama: $MODEL)"
+    else
+        echo "🧠 Brain: Cloud (Gemini)"
+    fi
 }
 
 function whatsapp_link() {

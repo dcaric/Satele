@@ -105,8 +105,9 @@ def ai_interpret(instruction, media_path=None):
     
     STRICT RULES FOR RECEIVED FILES:
     - If the user sends a file and says 'save it', you MUST use the SOURCE_PATH provided in the CONTEXT.
+    - To save a file: Use `mv SOURCE_PATH destination` (e.g., `mv /path/to/media/123.jpg ~/Downloads/`).
+    - Using `mv` is preferred over `cp` to keep the media folder clean.
     - Path Translation: {home_dir} is the user's home (~).
-    - To save a file: `cp SOURCE_PATH destination` (e.g., `cp /abs/path/to/media/123.jpg ~/Downloads/`)
     
     GENERAL RULES:
     1. Respond ONLY with safe bash commands, ONE PER LINE. No explanation.

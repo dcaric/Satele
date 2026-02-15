@@ -263,12 +263,21 @@ satele install
 ### 2. Link Current Project
 Run this in any project folder where you want your AI Agent to have access to Satele.
 ```bash
+cd ~/my-new-project
 satele link
 ```
-It creates a `.agent/skills/remote_bridge` symlink in your project.
+**What this does:**
+It creates a symbolic link `.agent/skills/remote_bridge` in your project pointing to the global skill.
+
+**In Antigravity IDE:**
+The IDE automatically scans `.agent/skills` when it opens. By running `satele link`, you are literally **injecting** the `send_whatsapp_message` tool into the agent's toolbox for that specific workspace.
 
 ### 3. Usage in Your Code
-Once linked, your AI Code Assistant can detect the skill and use it:
+Once linked, your AI Code Assistant will see the new tools. You can ask it:
+> *"When you finish these tests, send me a WhatsApp message."*
+
+Or use it programmatically:
+```python
 ```python
 # The agent will see this tool available:
 send_whatsapp_message("Hey! The long training job just finished with accuracy 98%.")

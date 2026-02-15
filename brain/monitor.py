@@ -14,8 +14,16 @@ except Exception as e:
     print(f"⚠️ Memory Init Warning: {e}")
     brain_memory = None
 
+# Move back to project root so commands execute in correct context
+# but only if we are in the 'brain' subdirectory
+if os.path.basename(os.getcwd()) == "brain":
+    os.chdir("..")
+    print(f"[Monitor] Moved to root: {os.getcwd()}")
+
 # Load environment variables from .env
-load_dotenv()
+# This will now load from brain/.env because dotenv search logic? 
+# No, let's be explicit.
+load_dotenv("brain/.env")
 
 def log(msg):
     print(f"[Monitor] {msg}")

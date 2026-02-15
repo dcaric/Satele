@@ -300,6 +300,10 @@ def process_instruction(instruction, media_path=None):
                         if (target.startswith('"') and target.endswith('"')) or \
                            (target.startswith("'") and target.endswith("'")):
                             target = target[1:-1]
+
+                        # Clean artifacts like "CWD:" or "Directory"
+                        if target.upper().startswith("CWD:"):
+                             target = target[4:].strip()
                         
                         # --- DOCKER PATH CORRECTION ---
                         # If user types 'cd home' or 'cd host' inside docker, force it to /host_home

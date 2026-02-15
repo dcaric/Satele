@@ -118,6 +118,7 @@ def ai_interpret(instruction, media_path=None):
     5. CWD: {os.getcwd()} | Home: {home_dir}
     6. FOR GUI APPS (Calculator, Chrome), use `sh: open -a "App Name"`.
     7. IF USER WANTS TO SEND/UPLOAD A FILE (e.g. 'send me x'), USE: `UPLOAD: /absolute/path/to/x`
+    8. PRESERVE PATH CASE EXACTLY. Do NOT lowercase project names or folder names.
     {context_str}
     """
     
@@ -285,11 +286,23 @@ def process_instruction(instruction, media_path=None):
 
                 # Auto-expand relative paths
                 if not os.path.isabs(raw_path):
-                    abs_path = os.path.abspath(os.path.join(os.getcwd(), raw_path))
-                    log(f"📂 Converting relative path -> '{abs_path}'")
-                    return f"UPLOAD: {abs_path}"
-                else:
-                    return f"UPLOAD: {raw_path}"
+                    raw_path = os.path.abspath(os.path.join(os.getcwd(), raw_path))
+                    log(f"📂 Converting relative path -> '{raw_path}'")
+
+                # --- CASE CORRECTION HEURISTIC ---
+                # If AI lowercased AntigravityMessages -> antigravitymessages, we fix it
+                if not os.path.exists(raw_path):
+                    parent = os.path.dirname(raw_path)
+                    target_name = os.path.basename(raw_path).lower()
+                    if os.path.exists(parent):
+                        for item in os.listdir(parent):
+                            if item.lower() == target_name:
+                                corrected_path = os.path.join(parent, item)
+                                log(f"✨ Auto-corrected Case: '{raw_path}' -> '{corrected_path}'")
+                                raw_path = corrected_path
+                                break
+                
+                return f"UPLOAD: {raw_path}"
             
             # Intercept 'cd' to persist directory changes in the Python process
             if cmd.strip().startswith("cd"):

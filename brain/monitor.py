@@ -62,31 +62,32 @@ def ai_interpret(instruction, media_path=None):
     # Load audio if present (Gemini only supports this via API, Ollama likely plain text)
     # We prepare content_parts but might not use it for Ollama
     
-    content_parts = [f"User is talking about this file: {media_path}\nUser Input: {instruction}"]
+    content_parts = [f"User Input: {instruction}"]
     
     if media_path and os.path.exists(media_path):
-        # Determine file type
         ext = os.path.splitext(media_path)[1].lower()
         is_audio = ext in ['.ogg', '.mp3', '.wav', '.m4a']
+        is_visual = ext in ['.jpg', '.jpeg', '.png', '.webp']
         
-        if is_audio:
-            log(f"🎙️ Uploading audio for analysis: {media_path}")
-            try:
-                if model:
-                    audio_file = genai.upload_file(path=media_path)
-                    content_parts.append(audio_file)
-            except Exception as e:
-                log(f"Audio upload error: {e}")
-        else:
-            log(f"📂 Received file/image: {media_path}")
-            # Add explicit instruction to the USER PROMPT part
-            content_parts[0] = f"IMPORTANT: The user just sent you a file located at: {media_path}\n" + content_parts[0]
+        log(f"📂 Processing Media: {media_path}")
+        
+        # Tell the AI EXPLICITLY about the source file
+        content_parts[0] = f"CONTEXT: You just received a file. SOURCE_PATH='{media_path}'\n" + content_parts[0]
+
+        try:
+            if model and (is_audio or is_visual):
+                # Upload to Gemini so it has visual/audio context
+                media_file = genai.upload_file(path=media_path)
+                content_parts.append(media_file)
+        except Exception as e:
+            log(f"Media upload error: {e}")
 
     provider = os.getenv("AI_PROVIDER", "gemini").lower()
     current_model = os.getenv("OLLAMA_MODEL", "gemma:2b") if provider == "ollama" else "gemini"
     system_os = platform.system()
     
     username = os.getenv("USER", "User")
+    home_dir = os.path.expanduser("~")
     
     # Context Retrieval
     context_str = ""
@@ -102,17 +103,17 @@ def ai_interpret(instruction, media_path=None):
     You are an AI bridge between a User's phone and their {os_name} terminal.
     Translating natural language into safe {os_name} bash commands.
     
-    Scenario: If the user sends a file and says 'save it' or mentions 'this file', 
-    the file they are talking about is the one at the path provided in the input.
+    STRICT RULES FOR RECEIVED FILES:
+    - If the user sends a file and says 'save it', you MUST use the SOURCE_PATH provided in the CONTEXT.
+    - Path Translation: {home_dir} is the user's home (~).
+    - To save a file: `cp SOURCE_PATH destination` (e.g., `cp /abs/path/to/media/123.jpg ~/Downloads/`)
     
-    Rules:
-    1. Respond with safe bash commands, ONE PER LINE. No explanation, no markdown.
-    2. If the user says 'save this file to X', use `cp` or `mv` from the provided file path to the destination.
-    3. Use `UPLOAD: <filepath>` ONLY when the user asks to send a file BACK to their phone.
-    4. CWD: {cwd}
-    5. User: {user}
+    GENERAL RULES:
+    1. Respond ONLY with safe bash commands, ONE PER LINE. No explanation.
+    2. Use `UPLOAD: <filepath>` ONLY to send a file BACK to the user's phone.
+    3. CWD: {cwd} | Home: {home_dir}
     {context}
-    """.format(cwd=os.getcwd(), provider=provider, model=current_model, os_name=system_os, user=username, context=context_str)
+    """.format(cwd=os.getcwd(), provider=provider, model=current_model, os_name=system_os, user=username, home_dir=home_dir, context=context_str)
     
     text_response = ""
     

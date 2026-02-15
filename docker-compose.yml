@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  satele:
+    build: .
+    container_name: satele_bridge
+    restart: unless-stopped
+
+    # 🌍 Environment Variables
+    environment:
+      - REMOTE_BRIDGE_URL=http://localhost:8000
+      - BRIDGE_SECRET_KEY=default-secret-key
+      - BOT_TRIGGER=satele
+      # 🧠 AI Config
+      - AI_PROVIDER=ollama
+      - OLLAMA_MODEL=gemma3:4b
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      # 🐳 Host Connectivity
+      - OLLAMA_HOST=http://host.docker.internal:11434
+
+    # 📂 Volumes
+    volumes:
+      # Config Persistance
+      - ./satele_cfg.env:/app/satele_cfg.env
+      # WhatsApp Session Persistance
+      - ./.mudslide_cache:/app/.mudslide_cache
+      # Shared Media
+      - ./media:/app/media
+      # Brain Memory Database
+      - ./brain/satele_memory:/app/brain/satele_memory
+      # 🚨 Host Access (Update this to your user folder!)
+      # On Mac: /Users/dcaric -> /host_home
+      # On Windows: C:/Users/YourName -> /host_home
+      - ${HOME}:/host_home
+
+    # 🌐 Networking (Allow access to Ollama/API on host)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    # 📝 Command
+    # By default, runs ./satele start which launches both Node & Python
+    # But for debugging, we can override to keep it alive
+    command: [ "/bin/bash", "-c", "./satele start && tail -f /tmp/satele_dcaric.log" ]

@@ -25,3 +25,6 @@ media/
 
 # Agent
 .agent/memory/
+.npm_cache/
+bridge.log
+.DS_Store

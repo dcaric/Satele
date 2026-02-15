@@ -79,13 +79,16 @@ def ai_interpret(instruction, media_path=None):
             
             payload = {
                 "model": model_name,
-                "prompt": f"System: {prompt_text}\nUser: {instruction}",
+                "messages": [
+                    {"role": "system", "content": prompt_text},
+                    {"role": "user", "content": instruction}
+                ],
                 "stream": False
             }
             
-            resp = requests.post("http://localhost:11434/api/generate", json=payload, timeout=30)
+            resp = requests.post("http://localhost:11434/api/chat", json=payload, timeout=30)
             if resp.status_code == 200:
-                text_response = resp.json().get("response", "").strip()
+                text_response = resp.json().get("message", {}).get("content", "").strip()
             else:
                 log(f"Ollama Error: {resp.status_code} - {resp.text}")
                 return None

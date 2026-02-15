@@ -67,6 +67,14 @@ function start() {
 
     # Load Config (Auto-migrate if missing)
     local ENV_FILE="$BASE_DIR/satele_cfg.env"
+    
+    # Check if ENV_FILE is a directory (Docker volume issue) and handle it
+    if [ -d "$ENV_FILE" ]; then
+        echo "⚠️ $ENV_FILE is a directory! (Likely Docker mounting issue)"
+        echo "Please delete it on host and create a file: touch satele_cfg.env"
+        exit 1
+    fi
+
     if [ ! -f "$ENV_FILE" ]; then
         if [ -f "$BASE_DIR/satele_cfg.env.example" ]; then
             cp "$BASE_DIR/satele_cfg.env.example" "$ENV_FILE"
@@ -85,15 +93,16 @@ function start() {
     NAME=${BOT_TRIGGER:-"satele"}
 
     # Sync config to Brain subdirectory (for monitor.py)
-    cp "$ENV_FILE" "$BASE_DIR/brain/.env"
+    # Check just in case brain/.env isn't mapped as a read-only volume
+    cp "$ENV_FILE" "$BASE_DIR/brain/.env" 2>/dev/null || echo "⚠️ Could not copy to brain/.env (might be read-only)"
 
-    # 1. Start FastAPI Server
-    if ! pgrep -f "Python server/main.py" > /dev/null; then
-        source venv/bin/activate
-        nohup python3 server/main.py >> /tmp/satele_dcaric.log 2>&1 &
-        echo "✅ FastAPI Server Started on Port 8000"
-    else
-        echo "✅ FastAPI Server already running."
+    # 1. Start FastAPI Server (If it exists)
+    if [ -f "server/main.py" ]; then
+        if ! pgrep -f "Python server/main.py" > /dev/null; then
+            if [ -f "venv/bin/activate" ]; then source venv/bin/activate; fi
+            nohup python3 server/main.py >> /tmp/satele_dcaric.log 2>&1 &
+            echo "✅ FastAPI Server Started"
+        fi
     fi
 
     # 2. Start WhatsApp Bridge
@@ -106,7 +115,9 @@ function start() {
 
     # 3. Start AI Monitor
     if ! pgrep -f "monitor.py" > /dev/null; then
-        source venv/bin/activate
+        if [ -f "$BASE_DIR/venv/bin/activate" ]; then
+            source "$BASE_DIR/venv/bin/activate"
+        fi
         nohup python3 "$BASE_DIR/brain/monitor.py" >> /tmp/satele_dcaric.log 2>&1 &
         echo "✅ AI Monitor (Brain) Started"
     else

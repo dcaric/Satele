@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     git \
     procps \
+    lsof \
     dos2unix \
     && rm -rf /var/lib/apt/lists/*
 

@@ -7,6 +7,13 @@ import platform
 import google.generativeai as genai
 from dotenv import load_dotenv
 
+try:
+    from memory import Memory
+    brain_memory = Memory()
+except Exception as e:
+    print(f"⚠️ Memory Init Warning: {e}")
+    brain_memory = None
+
 # Load environment variables from .env
 load_dotenv()
 
@@ -65,6 +72,16 @@ def ai_interpret(instruction, media_path=None):
     
     username = os.getenv("USER", "User")
     
+    # Context Retrieval
+    context_str = ""
+    if brain_memory:
+        try:
+            hits = brain_memory.recall(instruction, n_results=3)
+            if hits:
+                context_str = "\n\n🧠 Previous Relevant Context:\n" + "\n".join(hits)
+        except Exception as e:
+            log(f"Context error: {e}")
+    
     prompt_text = """
     You are an AI bridge between a Senior Developer's iPhone and their {os_name} terminal.
     Your job is to translate the natural language instruction (which might be in the audio) into safe {os_name} bash commands.
@@ -78,7 +95,10 @@ def ai_interpret(instruction, media_path=None):
     6. Tip: To chain commands, use separate lines or `&&`. To send the zip after creation, add a new line: `UPLOAD: archive.zip`.
     7. CWD: {cwd}
     8. System Info: OS ({os_name}), AI ({provider} - {model}), User ({user})
-    """.format(cwd=os.getcwd(), provider=provider, model=current_model, os_name=system_os, user=username)
+    {context}
+    """.format(cwd=os.getcwd(), provider=provider, model=current_model, os_name=system_os, user=username, context=context_str)
+    
+    text_response = ""
     
     if provider == "ollama":
         try:
@@ -145,6 +165,14 @@ def ai_interpret(instruction, media_path=None):
         except Exception as e:
             log(f"Gemini Error: {e}")
             return None
+
+    # Memory Storage
+    if brain_memory and text_response:
+        try:
+            brain_memory.remember(instruction, "user", {"cwd": os.getcwd()})
+            brain_memory.remember(text_response, "ai", {"cwd": os.getcwd()})
+        except Exception as e:
+            log(f"Memory Save Error: {e}")
 
     # Common Cleanup (for both providers)
     if not text_response: return []

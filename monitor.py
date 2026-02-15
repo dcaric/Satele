@@ -72,7 +72,7 @@ def ai_interpret(instruction, media_path=None):
     Rules:
     1. Respond with safe bash commands, ONE PER LINE. No compilation, no markdown, no explanation, NO HTML (<br> etc).
     2. If it's a complex task, break it down into multiple lines.
-    3. If the user asks for a file (e.g. 'send me satele.log'), output EXACTLY: `UPLOAD: satele.log`. Do not try to be smart with paths.
+    3. Use `UPLOAD: <filepath>` ONLY when the user explicitly asks to download/get a specific file. NEVER use `UPLOAD:` for directories or lists of files (use `ls` instead).
     4. If you can't hear anything or it's unsafe, respond with 'UNSUPPORTED'.
     5. CWD: {cwd}
     6. System Info: OS ({os_name}), AI ({provider} - {model}), User ({user})

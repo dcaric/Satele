@@ -128,10 +128,31 @@ function status() {
     else
         echo "🧠 Brain: Cloud (Gemini)"
         if [ -f "token_usage.json" ]; then
-            TOTAL=$(python3 -c "import json; print(json.load(open('token_usage.json'))['total'])" 2>/dev/null)
-            if [ ! -z "$TOTAL" ]; then
-                echo "💸 Total Gemini Usage: $TOTAL tokens"
-            fi
+            # Load Prices
+            P_IN=$(get_env_var "GEMINI_PRICE_IN" "0")
+            P_OUT=$(get_env_var "GEMINI_PRICE_OUT" "0")
+            
+            # Execute Python Calculation
+            python3 -c "
+import json, os
+try:
+    data = json.load(open('token_usage.json'))
+    t_in = data.get('in', 0)
+    t_out = data.get('out', 0)
+    t_total = data.get('total', 0)
+    
+    p_in = float('$P_IN')
+    p_out = float('$P_OUT')
+    
+    cost = (t_in * p_in) + (t_out * p_out)
+    
+    print(f'📥 Input: {t_in:,} | 📤 Output: {t_out:,}')
+    print(f'💸 Total Gemini Usage: {t_total:,} tokens')
+    if cost > 0:
+        print(f'💰 Estimated Cost: \${cost:.6f}')
+except Exception as e:
+    pass
+"
         fi
     fi
 }
@@ -226,6 +247,23 @@ function link_project() {
     echo "   - Linked Workflow: /satele"
     
     echo "✅ Project Linked! You can now use '/satele' in this workspace."
+}
+
+function set_token_prices() {
+    local PRICE_IN=$1
+    local PRICE_OUT=$2
+    
+    if [ -z "$PRICE_IN" ] || [ -z "$PRICE_OUT" ]; then
+        echo "❌ Usage: satele tokens <price_per_token_in> <price_per_token_out>"
+        echo "💡 Example (Gemini Flash): satele tokens 0.000000075 0.00000030"
+        return 1
+    fi
+    
+    update_env "GEMINI_PRICE_IN" "$PRICE_IN"
+    update_env "GEMINI_PRICE_OUT" "$PRICE_OUT"
+    echo "✅ Token prices updated."
+    echo "📥 Input Price: \$$PRICE_IN / token"
+    echo "📤 Output Price: \$$PRICE_OUT / token"
 }
 
 function ollama_mgr() {
@@ -358,6 +396,7 @@ function help() {
     echo "  ollama [model]      Manage local AI (e.g. 'satele ollama gemma3:4b')"
     echo "  ollama start        Switch to Local Ollama mode"
     echo "  ollama stop         Switch back to Cloud Gemini mode"
+    echo "  tokens <in> <out>   Set price per token (e.g. 0.000000075 0.00000030)"
     echo "  whatsapp            Launch interactive mode to link a device via QR code"
     echo "  setup-sudo          Enable passwordless sudo (Optional, use with caution)"
     echo "  install             Install the connection skill globally (for IDE)"
@@ -387,6 +426,9 @@ case "$1" in
         ;;
     ollama)
         ollama_mgr "$2"
+        ;;
+    tokens)
+        set_token_prices "$2" "$3"
         ;;
     name)
         set_name "$2"

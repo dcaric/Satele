@@ -248,7 +248,32 @@ To allow other numbers (e.g., your secondary phone):
 
 ## 🐧 Linux Specifics
 - Ensure `ffmpeg` is installed for voice note processing (`sudo apt install ffmpeg`).
-- If `satele setup` fails on `npm`, ensure `nodejs` (v18+) is installed.
+---
+
+## 🤖 For AI Developers: Agent Integration (Skill)
+
+Satele isn't just a chatbot; it's a **Skill** you can install into other AI Agents (like Antigravity, OpenInterpreter, or Custom LLMs). This allows your coding agents to **send WhatsApp messages to you** when they finish a task or need input.
+
+### 1. Install Global Skill
+This installs the `remote_bridge` skill into your `~/.agent/skills` directory, making it available to all your AI projects.
+```bash
+satele install
+```
+
+### 2. Link Current Project
+Run this in any project folder where you want your AI Agent to have access to Satele.
+```bash
+satele link
+```
+It creates a `.agent/skills/remote_bridge` symlink in your project.
+
+### 3. Usage in Your Code
+Once linked, your AI Code Assistant can detect the skill and use it:
+```python
+# The agent will see this tool available:
+send_whatsapp_message("Hey! The long training job just finished with accuracy 98%.")
+```
+It connects to your running Satele instance (via `localhost:8000`) to deliver the message instantly to your phone.
 
 ---
 

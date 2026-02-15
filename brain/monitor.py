@@ -116,6 +116,7 @@ def ai_interpret(instruction, media_path=None):
     3. Use absolute paths.
     4. Respond ONLY with safe bash commands, ONE PER LINE. No explanation.
     5. CWD: {os.getcwd()} | Home: {home_dir}
+    6. FOR GUI APPS (Calculator, Chrome), use `sh: open -a "App Name"`.
     {context_str}
     """
     

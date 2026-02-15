@@ -126,7 +126,8 @@ function status() {
         MODEL=$(get_env_var "OLLAMA_MODEL" "unknown")
         echo "🧠 Brain: Local (Ollama: $MODEL)"
     else
-        echo "🧠 Brain: Cloud (Gemini)"
+        MODEL=$(get_env_var "GEMINI_MODEL" "gemini-2.0-flash")
+        echo "🧠 Brain: Cloud (Gemini: $MODEL)"
         if [ -f "token_usage.json" ]; then
             # Load Prices
             P_IN=$(get_env_var "GEMINI_PRICE_IN" "0")
@@ -266,6 +267,19 @@ function set_token_prices() {
     echo "📤 Output Price: \$$PRICE_OUT / 1M tokens"
 }
 
+function set_gemini_model() {
+    local MODEL=$1
+    if [ -z "$MODEL" ]; then
+        echo "❌ Usage: satele gemini <model_name>"
+        echo "💡 Examples: gemini-3-flash-preview, gemini-2.0-flash"
+        return 1
+    fi
+    update_env "GEMINI_MODEL" "$MODEL"
+    update_env "AI_PROVIDER" "gemini"
+    echo "✅ Switched to Cloud Gemini: $MODEL"
+    echo "🔄 Please restart Satele services: 'satele stop && satele start'"
+}
+
 function ollama_mgr() {
     local SUB_CMD=$1
     local EXTRA_ARG=$2
@@ -393,6 +407,7 @@ function help() {
     echo "  kill                Force kill all related processes"
     echo "  name <name>         Set the bot's trigger name (default: satele)"
     echo "  geminikey <key>     Set your Google Gemini API Key"
+    echo "  gemini <model>      Set active Gemini model (e.g. gemini-3-flash-preview)"
     echo "  ollama [model]      Manage local AI (e.g. 'satele ollama gemma3:4b')"
     echo "  ollama start        Switch to Local Ollama mode"
     echo "  ollama stop         Switch back to Cloud Gemini mode"
@@ -426,6 +441,9 @@ case "$1" in
         ;;
     ollama)
         ollama_mgr "$2"
+        ;;
+    gemini)
+        set_gemini_model "$2"
         ;;
     tokens)
         set_token_prices "$2" "$3"

@@ -17,7 +17,9 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 # Initialize Gemini if key is available
 if GOOGLE_API_KEY:
     genai.configure(api_key=GOOGLE_API_KEY)
-    model = genai.GenerativeModel('gemini-3-flash-preview')
+    gemini_model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+    model = genai.GenerativeModel(gemini_model_name)
+    log(f"🧠 Using Gemini Model: {gemini_model_name}")
     log_brain = "🧠 AI Brain (Gemini) Active"
 else:
     model = None

@@ -58,6 +58,9 @@ def ai_interpret(instruction, media_path=None):
         except Exception as e:
             log(f"Audio upload error: {e}")
 
+    provider = os.getenv("AI_PROVIDER", "gemini").lower()
+    current_model = os.getenv("OLLAMA_MODEL", "gemma:2b") if provider == "ollama" else "gemini"
+
     prompt_text = """
     You are an AI bridge between a Senior Developer's iPhone and their MacBook terminal.
     Your job is to translate the natural language instruction (which might be in the audio) into macOS bash commands.
@@ -68,13 +71,12 @@ def ai_interpret(instruction, media_path=None):
     3. If the user asks for a file (e.g. 'send me satele.log'), output EXACTLY: `UPLOAD: satele.log`. Do not try to be smart with paths.
     4. If you can't hear anything or it's unsafe, respond with 'UNSUPPORTED'.
     5. CWD: {cwd}
-    """.format(cwd=os.getcwd())
-    
-    provider = os.getenv("AI_PROVIDER", "gemini").lower()
+    6. System Info: AI ({provider} - {model}), User (Dario)
+    """.format(cwd=os.getcwd(), provider=provider, model=current_model)
     
     if provider == "ollama":
         try:
-            model_name = os.getenv("OLLAMA_MODEL", "gemma:2b")
+            model_name = current_model
             log(f"🦙 Using Ollama Model: {model_name}")
             
             payload = {

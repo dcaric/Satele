@@ -183,3 +183,18 @@ To allow other numbers (e.g., your secondary phone):
 ## 🐧 Linux Specifics
 - Ensure `ffmpeg` is installed for voice note processing (`sudo apt install ffmpeg`).
 - If `satele setup` fails on `npm`, ensure `nodejs` (v18+) is installed.
+
+---
+
+## 🌟 Main Purpose & Vision
+
+Satele is designed to be your **Personal Digital Bridge**. Its core mission is to eliminate the physical boundaries between you and your computer:
+
+*   **Remote File Access**: Imagine you are away from home and realize you need a specific document or log from your main computer. Instead of rushing back, you just ask Satele via WhatsApp, and the file is delivered to you instantly.
+*   **Remote Operations**: Need to start a long-running process, run a maintenance script, or check if a service is healthy while you're commuting? Satele executes these actions for you as if you were sitting right at your desk.
+*   **System Mastery**: From checking hardware health to managing your local network, Satele provides a voice-and-text interface for your entire home environment.
+
+### 🔭 The Future: A Gateway for Agents
+Satele is not just a tool; it's an **extensible platform**. While it currently acts as a bridge for commands and file transfers, it is architected to be a gateway for **multi-agent systems**. 
+
+In the future, Satele can be expanded to leverage specialized AI agents—one might handle coding tasks, another could manage your calendar, and another could monitor your security cameras—all coordinated through a single, seamless WhatsApp conversation.

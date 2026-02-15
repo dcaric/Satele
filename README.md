@@ -1,4 +1,4 @@
-# 🪐 Satele: Autonomous Remote Bridge
+# 🪐 Satele: AI-Powered Remote OS Orchestrator
 
 Satele is an advanced, multimodal bridge that connects your **WhatsApp** to your **Server/Desktop Environment**. It allows you to control your machine via text or voice commands using AI (Gemini or Ollama).
 
@@ -353,7 +353,7 @@ Satele can be "upgraded" beyond simple shell commands by chaining system tools l
 ```bash
 sh: open -a Calculator; osascript -e 'tell application "Calculator" to activate'; sleep 2; osascript -e 'tell application "System Events" to keystroke "2+2="'; sleep 2; /usr/sbin/screencapture -x /Users/dcaric/Working/ml/AntigravityMessages/media/calc.png; echo "UPLOAD: /Users/dcaric/Working/ml/AntigravityMessages/media/calc.png"
 ```
-Command is complex but the point is that Satele orchestartor can be easily upgraded with skills and in that case user will send simple message
+The command is complex, but the point is that the **Satele Orchestrator** can be easily upgraded with skills. In the future, a user can simply send a natural language message and Satele will execute these multi-step automations behind the scenes.
 
 **How it works:**
 1.  **Launch:** `open -a Calculator` opens the application.

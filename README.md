@@ -1,101 +1,141 @@
-# 🪐 Satele: Antigravity Remote Bridge
+# 🪐 Satele: Autonomous Remote Bridge
 
-Satele is an autonomous, multimodal bridge that allows you to control your Mac and interact with your code via **WhatsApp** and **Voice Commands**. It uses Gemini 3 Flash to translate your natural language into actionable terminal commands.
+Satele is an advanced, multimodal bridge that connects your **WhatsApp** to your **Server/Desktop Environment**. It allows you to control your machine via text or voice commands using AI (Gemini or Ollama).
 
 ---
 
-## 🚀 Quick Setup
+## 🌍 Supported Platforms
 
-### 1. Global Installation
-Enable the `satele` command from any terminal folder:
+| OS | Support Level | Notes |
+| :--- | :--- | :--- |
+| **macOS** (Silicon/Intel) | ✅ Full | Native support for all features including audio. |
+| **Linux** (Ubuntu/Debian) | ✅ Full | Requires `nodejs`, `python3-venv`, and `ffmpeg` installed. |
+| **Windows** | ❌ No | Only via WSL2 (treat as Linux). |
+
+---
+
+## 🚀 Installation & Setup
+
+### 1. Clone & Prepare
+Clone the repository to your desired location (e.g., `~/satele`):
 ```bash
-echo "alias satele='/Users/dcaric/Working/ml/AntigravityMessages/satele'" >> ~/.zshrc && source ~/.zshrc
+git clone https://github.com/dcaric/Satele.git ~/satele
+cd ~/satele
 ```
 
 ### 2. Install Dependencies
-Run the built-in setup command to install Python and Node.js packages:
+Run the built-in setup command to install Node.js modules and Python virtual environment:
 ```bash
 ./satele setup
 ```
-*(Or manually: `npm install` and `python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt`)*
 
-### 3. Configure Brain
-Set your Gemini API Key (required for voice commands and background monitoring):
+### 3. Make Command Global
+To use `satele` from anywhere (instead of `./satele`), add it to your shell profile.
+
+**On macOS (Zsh):**
 ```bash
-satele geminikey AIzaSy...
+echo 'export PATH="$HOME/satele:$PATH"' >> ~/.zshrc && source ~/.zshrc
 ```
 
-### 3. Connect Phone
-Link your WhatsApp account (one-time setup):
+**On Linux (Bash):**
+```bash
+echo 'export PATH="$HOME/satele:$PATH"' >> ~/.bashrc && source ~/.bashrc
+```
+
+Now you can just type `satele status` from any folder!
+
+---
+
+## 🧠 AI Configuration
+
+Satele supports two AI backends: **Cloud (Google Gemini)** and **Local (Ollama)**.
+
+### Option A: Cloud (Google Gemini)
+Best for speed, multimodal (audio/images), and complex reasoning.
+1.  **Get Key**: Obtain a key from [Google AI Studio](https://aistudio.google.com/).
+2.  **Set Key**:
+    ```bash
+    satele geminikey AIzaSy...
+    ```
+3.  **Select Model** (Optional, default is `gemini-2.0-flash`):
+    ```bash
+    satele gemini gemini-3-flash-preview
+    ```
+4.  **Track Costs**: Set pricing (e.g., $0.50/1M input, $3.00/1M output):
+    ```bash
+    satele tokens 0.50 3.00
+    ```
+
+### Option B: Local (Ollama)
+Best for privacy and offline usage. Free.
+1.  **Install/Check**:
+    ```bash
+    satele ollama
+    ```
+2.  **Download Model**:
+    ```bash
+    satele ollama gemma3:4b
+    ```
+    *(This downloads the model and creates a custom `satele` variant with system prompts)*.
+3.  **Switch to Local**:
+    ```bash
+    satele ollama start
+    satele stop && satele start
+    ```
+4.  **Switch Back to Cloud**:
+    ```bash
+    satele ollama stop
+    satele stop && satele start
+    ```
+
+---
+
+## 🛠️ Usage & Commands
+
+### 📱 1. Connect WhatsApp
+Link your device to enable remote control:
 ```bash
 satele whatsapp
 ```
-*Go to WhatsApp > Settings > Linked Devices > Link a Device.*
+Scan the QR code with WhatsApp (Linked Devices).
 
-### 4. Install Project Tools (Optional)
-If you want to use the **Antigravity Agent** to control your project remotely, enable the plugin in your current workspace:
-```bash
-# First, install the skills globally (do this once)
-mkdir -p ~/satele_global && cp -r .agent/* ~/satele_global/
-
-# Then, link it to any new project
-satele link
-```
-
----
-
-## 🛠️ Command Reference
-
+### 🤖 2. Manage Service
 | Command | Description |
 | :--- | :--- |
-| `satele start` | Starts all services (FastAPI, WhatsApp, AI Monitor) in the background. |
-| `satele stop` | Terminates all running satele background processes. |
-| `satele status` | Checks the health of the "Brain" components. |
-| `satele name <name>` | Sets a custom wake-word (Default: `satele`). |
-| `satele geminikey <key>` | Sets or updates your Google Gemini API Key. |
-| `satele whatsapp` | Restarts the linking process to show the QR code. |
-| `satele install` | Installs the Satele Skill globally to your IDE (`~/satele_global`). |
-| `satele setup-sudo` | **(Advanced)** Configures passwordless `sudo` for your user. Use this to allow Satele to run admin commands like `shutdown`, `reboot`, or `powermetrics` without asking for password. |
-| `satele link` | Enables `/satele` command in the current project by linking the global skill. |
-| `satele kill` | Force kills all processes if `stop` fails. |
+| `satele start` | Starts all background services. |
+| `satele stop` | Stops all services. |
+| `satele status` | Shows health, active AI model, and token usage cost. |
+| `satele name <name>` | Sets a custom wake-word (e.g. `satele name M1`). Useful for multi-bot setups. |
+| `satele setup-sudo` | Configures passwordless `sudo` for Satele (Advanced). |
+
+### 🎙️ 3. Remote Capabilities (WhatsApp)
+
+#### **System Checks**
+> *"M1 check disk usage"*
+> *"Status report"*
+> *"Who is logged in?"*
+
+#### **File Transfer**
+> *"Send me satele.log"*
+> *"Get config.json"*
+
+#### **Voice Interaction**
+> *(Send a Voice Note)*: "Check if the docker container is running and restart it if not."
+
+#### **Direct Shell**
+> *"sh: ls -la /var/log"*
 
 ---
 
-## 🎙️ User Guide
+## 🛡️ Security
 
-### 1. Simple Tasks (Background Brain)
-The background monitor (`satele start`) handles quick system queries instantly.
-- *"Satele, check my disk usage"*
-- *"Satele, are there any errors in satele.log?"*
-- *"Satele, list the 5 most CPU intensive processes"*
-
-### 2. Advanced Development (Agent Brain)
-To perform complex coding tasks, you must activate the **Antigravity Agent** inside your IDE.
-1.  Run `satele link` in your project folder.
-2.  Type `/satele` in the Antigravity chat window.
-3.  Send a WhatsApp message with the phrase **"use gravity"**:
-    - *"Satele, **use gravity** to refactor the login system"*
-    - *"Satele, **use gravity** and check why the tests are failing"*
-
-### 3. Direct Shell Access
-If you need 100% precision, use the `sh:` prefix:
-- `satele sh: ls -la`
-- `satele sh: pwd`
-
-### 4. Voice Commands
-Simply record a **Voice Note** on WhatsApp. The Gemini brain will listen to it, understand your intent, and execute the command.
-- *"Hey Satele, check if the server is still running on port 8000."*
+- **Sudo Access**: Satele runs as your user. It cannot run `sudo` unless you explicitly enable it via `satele setup-sudo`.
+- **Environment**: API Keys are stored in `.env` (git-ignored).
+- **Logs**: Activity is logged to `satele.log` (git-ignored).
+- **WhatsApp**: Uses end-to-end encryption via Multi-Device API.
 
 ---
 
-## 🧠 Architecture
-- **WhatsApp Bridge**: A Node.js service using Baileys to handle real-time messaging.
-- **FastAPI Server**: Central gateway for task queuing and result relay.
-- **AI Monitor**: A Python service that uses the **Gemini 3 Flash Preview** model to interpret commands.
-- **Logs**: All activity is logged to `satele.log`.
-
----
-
-## 🔐 Privacy & Security
-- Your voice notes are temporarily stored in `media/` and wiped every time the system starts.
-- The `.env` file is ignored by Git to keep your API keys safe.
+## 🐧 Linux Specifics
+- Ensure `ffmpeg` is installed for voice note processing (`sudo apt install ffmpeg`).
+- If `satele setup` fails on `npm`, ensure `nodejs` (v18+) is installed.

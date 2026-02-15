@@ -75,26 +75,41 @@ def ai_interpret(instruction, media_path=None):
         except Exception as e:
             log(f"Context error: {e}")
     
-    prompt_text = f"""
-    You are an AI bridge. You translate natural language to safe bash commands.
     
+    # Dynamic Environment Detection
+    is_docker = os.path.exists("/host_home")
+    if is_docker:
+        env_context = """
     ENVIRONMENT CONTEXT:
-    - You are running inside a Linux Container.
+    - You are running inside a Linux Container (Docker).
     - The User's HOST Home Directory is mounted at: /host_home
     - Downloads: /host_home/Downloads
     - Documents: /host_home/Documents
     - If user asks for "Downloads", use `/host_home/Downloads`.
+    - Host Home: /host_home"""
+        example_dest = "/host_home/Downloads"
+    else:
+        env_context = f"""
+    ENVIRONMENT CONTEXT:
+    - You are running natively on {platform.system()}.
+    - User Home: {home_dir}
+    - Downloads: {home_dir}/Downloads"""
+        example_dest = f"{home_dir}/Downloads"
+
+    prompt_text = f"""
+    You are an AI bridge. You translate natural language to safe bash commands.
+    {env_context}
     
     CRITICAL FILE HANDLING RULES:
     1. If the user sends a file/image and says 'save it' or similar:
        - THE SOURCE IS: '{media_path}'
-       - THE DESTINATION IS: Whatever path the user mentioned (e.g /host_home/Downloads).
+       - THE DESTINATION IS: Whatever path the user mentioned (e.g {example_dest}).
        - COMMAND MUST BE: `mv {media_path} <destination>`
     
     2. NEVER SWAP THE DIRECTION. The file at {media_path} is the one you must move.
     3. Use absolute paths.
     4. Respond ONLY with safe bash commands, ONE PER LINE. No explanation.
-    5. CWD: {os.getcwd()} | Home: {home_dir} | Host Home: /host_home
+    5. CWD: {os.getcwd()} | Home: {home_dir}
     {context_str}
     """
     

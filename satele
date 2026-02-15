@@ -54,11 +54,14 @@ function start() {
     mkdir -p media
     rm -f media/*
 
-    # Load Config from .env to capture NAME
-    if [ -f ".env" ]; then
-        NAME=$(grep BOT_TRIGGER .env | cut -d '=' -f2)
+    # Load Config from .env to capture vars
+    NAME="satele"
+    if [ -f "$BASE_DIR/.env" ]; then
+        set -a
+        source "$BASE_DIR/.env"
+        set +a
+        if [ -n "$BOT_TRIGGER" ]; then NAME="$BOT_TRIGGER"; fi
     fi
-    if [ -z "$NAME" ]; then NAME="satele"; fi
 
     # 1. Start FastAPI Server
     if ! pgrep -f "Python server/main.py" > /dev/null; then
@@ -290,6 +293,53 @@ function set_gemini_model() {
     echo "🔄 Please restart Satele services: 'satele stop && satele start'"
 }
 
+function add_number() {
+    local NUM=$1
+    if [ -z "$NUM" ]; then echo "❌ Usage: satele add-number <mobile_number> (e.g. 38591...)"; return 1; fi
+    
+    # Clean number (remove + and spaces)
+    NUM=$(echo "$NUM" | tr -d '+ ')
+    
+    CURRENT=$(grep "^ALLOWED_NUMBERS=" "$BASE_DIR/.env" | cut -d= -f2)
+    if [ -z "$CURRENT" ]; then
+        update_env "ALLOWED_NUMBERS" "$NUM"
+    else
+        # Check if exists
+        if [[ ",$CURRENT," == *",$NUM,"* ]]; then
+            echo "✅ Number $NUM is already allowed."
+            return
+        fi
+        update_env "ALLOWED_NUMBERS" "$CURRENT,$NUM"
+    fi
+    echo "✅ Added $NUM to allowed list."
+    echo "🔄 Please restart Satele to apply."
+}
+
+function remove_number() {
+    local NUM=$1
+    if [ -z "$NUM" ]; then echo "❌ Usage: satele remove-number <mobile_number>"; return 1; fi
+    NUM=$(echo "$NUM" | tr -d '+ ')
+    
+    CURRENT=$(grep "^ALLOWED_NUMBERS=" "$BASE_DIR/.env" | cut -d= -f2)
+    # Remove number from comma list
+    # Logic: convert commas to newlines, grep -v, paste back
+    NEW=$(echo "$CURRENT" | tr ',' '\n' | grep -v "^$NUM$" | paste -sd, -)
+    
+    update_env "ALLOWED_NUMBERS" "$NEW"
+    echo "✅ Removed $NUM from allowed list."
+    echo "🔄 Please restart Satele to apply."
+}
+
+function list_numbers() {
+    CURRENT=$(grep "^ALLOWED_NUMBERS=" "$BASE_DIR/.env" | cut -d= -f2)
+    if [ -z "$CURRENT" ]; then
+        echo "📭 No extra numbers allowed (Only 'Me' is allowed by default)."
+    else
+        echo "📋 Allowed Numbers:"
+        echo "$CURRENT" | tr ',' '\n' | sed 's/^/- /'
+    fi
+}
+
 function ollama_mgr() {
     local SUB_CMD=$1
     local EXTRA_ARG=$2
@@ -416,12 +466,14 @@ function help() {
     echo "  status              Check if services are running"
     echo "  kill                Force kill all related processes"
     echo "  name <name>         Set the bot's trigger name (default: satele)"
-    echo "  geminikey <key>     Set your Google Gemini API Key"
-    echo "  gemini <model>      Set active Gemini model (e.g. gemini-3-flash-preview)"
+    echo "  satele tokens <in> <out> - Set pricing for Gemini (e.g. 0.50 3.00)"
+    echo "  satele gemini <model>    - Switch Gemini model (e.g. gemini-3-flash-preview)"
+    echo "  satele add-number <num>  - Whitelist a number (e.g. 38591...)"
+    echo "  satele remove-number <n> - Remove number from whitelist"
+    echo "  satele list-numbers      - Show allowed numbers"
     echo "  ollama [model]      Manage local AI (e.g. 'satele ollama gemma3:4b')"
     echo "  ollama start        Switch to Local Ollama mode"
     echo "  ollama stop         Switch back to Cloud Gemini mode"
-    echo "  tokens <in> <out>   Set price ($) per 1M tokens (e.g. 0.50 3.00)"
     echo "  whatsapp            Launch interactive mode to link a device via QR code"
     echo "  setup-sudo          Enable passwordless sudo (Optional, use with caution)"
     echo "  install             Install the connection skill globally (for IDE)"
@@ -454,6 +506,15 @@ case "$1" in
         ;;
     gemini)
         set_gemini_model "$2"
+        ;;
+    add-number)
+        add_number "$2"
+        ;;
+    remove-number)
+        remove_number "$2"
+        ;;
+    list-numbers)
+        list_numbers
         ;;
     tokens)
         set_token_prices "$2" "$3"

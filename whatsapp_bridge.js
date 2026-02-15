@@ -79,6 +79,20 @@ async function startWhatsApp() {
             const sender = msg.key.remoteJid;
             const targetSender = fromMe ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : sender;
 
+            // --- WHITELIST CHECK ---
+            // Allow self (fromMe) by default.
+            // Check ALLOWED_NUMBERS env for others.
+            const allowedList = (process.env.ALLOWED_NUMBERS || "").split(',').map(n => n.trim()).filter(n => n);
+            const senderId = sender.split('@')[0].split(':')[0]; // Remove suffix and connection ID
+
+            const isAllowed = fromMe || allowedList.includes(senderId);
+
+            if (!isAllowed) {
+                console.log(`🚫 START_IGNORE: Blocked message from unauthorized sender: ${sender} (ID: ${senderId})`);
+                continue;
+            }
+            // -----------------------
+
             let mediaPath = null;
 
             if (isAudio && msg.message.audioMessage.ptt) {

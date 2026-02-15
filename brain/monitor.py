@@ -62,7 +62,7 @@ def ai_interpret(instruction, media_path=None):
     # Load audio if present (Gemini only supports this via API, Ollama likely plain text)
     # We prepare content_parts but might not use it for Ollama
     
-    content_parts = [f"System Instruction: Translate to 1 safe macOS bash command.\nUser Input: {instruction}"]
+    content_parts = [f"User is talking about this file: {media_path}\nUser Input: {instruction}"]
     
     if media_path and os.path.exists(media_path):
         # Determine file type
@@ -79,10 +79,8 @@ def ai_interpret(instruction, media_path=None):
                 log(f"Audio upload error: {e}")
         else:
             log(f"📂 Received file/image: {media_path}")
-            # We don't necessarily need to upload it to Gemini unless we want it to 'see' the image
-            # But we MUST tell the AI where the file is so it can operate on it.
-            prompt_media_info = f"\n📎 A file was received and is available at: {media_path}"
-            content_parts[0] += prompt_media_info
+            # Add explicit instruction to the USER PROMPT part
+            content_parts[0] = f"IMPORTANT: The user just sent you a file located at: {media_path}\n" + content_parts[0]
 
     provider = os.getenv("AI_PROVIDER", "gemini").lower()
     current_model = os.getenv("OLLAMA_MODEL", "gemma:2b") if provider == "ollama" else "gemini"
@@ -101,19 +99,18 @@ def ai_interpret(instruction, media_path=None):
             log(f"Context error: {e}")
     
     prompt_text = """
-    You are an AI bridge between a Senior Developer's iPhone and their {os_name} terminal.
-    Your job is to translate the natural language instruction into safe {os_name} bash commands.
+    You are an AI bridge between a User's phone and their {os_name} terminal.
+    Translating natural language into safe {os_name} bash commands.
     
-    Important: If a file path is provided in the input, you can use it (e.g., to move, copy, or zip it).
+    Scenario: If the user sends a file and says 'save it' or mentions 'this file', 
+    the file they are talking about is the one at the path provided in the input.
     
     Rules:
-    1. Respond with safe bash commands, ONE PER LINE. No compilation, no markdown, no explanation, NO HTML.
-    2. If it's a complex task, break it down into multiple lines.
-    3. Use `UPLOAD: <filepath>` ONLY when the user explicitly asks to download/get a specific file FROM the server to their phone.
-    4. Tip: If the user sends a file and says 'save it', you should move it from its temporary media path to a logical place (like ~/Downloads or ~/Desktop).
-    5. Tip: For zipping, use wildcards: `zip archive.zip *.json *.log`. 
-    6. CWD: {cwd}
-    7. System Info: OS ({os_name}), AI ({provider} - {model}), User ({user})
+    1. Respond with safe bash commands, ONE PER LINE. No explanation, no markdown.
+    2. If the user says 'save this file to X', use `cp` or `mv` from the provided file path to the destination.
+    3. Use `UPLOAD: <filepath>` ONLY when the user asks to send a file BACK to their phone.
+    4. CWD: {cwd}
+    5. User: {user}
     {context}
     """.format(cwd=os.getcwd(), provider=provider, model=current_model, os_name=system_os, user=username, context=context_str)
     

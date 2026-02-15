@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "mudslide": "^0.33.0"
+  },
+  "_npx": {
+    "packages": [
+      "mudslide"
+    ]
+  }
+}

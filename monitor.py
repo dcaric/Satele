@@ -63,6 +63,8 @@ def ai_interpret(instruction, media_path=None):
     current_model = os.getenv("OLLAMA_MODEL", "gemma:2b") if provider == "ollama" else "gemini"
     system_os = platform.system()
     
+    username = os.getenv("USER", "User")
+    
     prompt_text = """
     You are an AI bridge between a Senior Developer's iPhone and their {os_name} terminal.
     Your job is to translate the natural language instruction (which might be in the audio) into safe {os_name} bash commands.
@@ -73,8 +75,8 @@ def ai_interpret(instruction, media_path=None):
     3. If the user asks for a file (e.g. 'send me satele.log'), output EXACTLY: `UPLOAD: satele.log`. Do not try to be smart with paths.
     4. If you can't hear anything or it's unsafe, respond with 'UNSUPPORTED'.
     5. CWD: {cwd}
-    6. System Info: OS ({os_name}), AI ({provider} - {model}), User (Dario)
-    """.format(cwd=os.getcwd(), provider=provider, model=current_model, os_name=system_os)
+    6. System Info: OS ({os_name}), AI ({provider} - {model}), User ({user})
+    """.format(cwd=os.getcwd(), provider=provider, model=current_model, os_name=system_os, user=username)
     
     if provider == "ollama":
         try:

@@ -312,11 +312,24 @@ def process_instruction(instruction, media_path=None):
                                 target = "/host_home"
                             elif target.lower() == "root":
                                 target = "/"
+                            else:
+                                # Try to resolve relative to current dir first, then host_home
+                                try_local = os.path.abspath(os.path.join(os.getcwd(), target))
+                                try_host = os.path.abspath(os.path.join("/host_home", target))
+                                
+                                if os.path.isdir(try_local):
+                                    target = try_local
+                                elif os.path.isdir(try_host):
+                                    target = try_host
+                                else:
+                                     target = os.path.expanduser(target)
                         else:
                              target = os.path.expanduser(target)
                     
                     os.chdir(target)
                     out = f"📂 Directory changed to: {os.getcwd()}"
+                    if os.path.exists("/host_home") and os.getcwd().startswith("/host_home"):
+                         out += " (On Host System)"
                     log(f"✅ Persistent CD: {os.getcwd()}")
                 except Exception as e:
                      out = f"❌ CD Failed: {e}"

@@ -62,30 +62,6 @@ def ai_interpret(instruction, media_path=None):
     # Load audio if present (Gemini only supports this via API, Ollama likely plain text)
     # We prepare content_parts but might not use it for Ollama
     
-    content_parts = [f"User Input: {instruction}"]
-    
-    if media_path and os.path.exists(media_path):
-        ext = os.path.splitext(media_path)[1].lower()
-        is_audio = ext in ['.ogg', '.mp3', '.wav', '.m4a']
-        is_visual = ext in ['.jpg', '.jpeg', '.png', '.webp']
-        
-        log(f"📂 Processing Media: {media_path}")
-        
-        # Tell the AI EXPLICITLY about the source file
-        content_parts[0] = f"CONTEXT: You just received a file. SOURCE_PATH='{media_path}'\n" + content_parts[0]
-
-        try:
-            if model and (is_audio or is_visual):
-                # Upload to Gemini so it has visual/audio context
-                media_file = genai.upload_file(path=media_path)
-                content_parts.append(media_file)
-        except Exception as e:
-            log(f"Media upload error: {e}")
-
-    provider = os.getenv("AI_PROVIDER", "gemini").lower()
-    current_model = os.getenv("OLLAMA_MODEL", "gemma:2b") if provider == "ollama" else "gemini"
-    system_os = platform.system()
-    
     username = os.getenv("USER", "User")
     home_dir = os.path.expanduser("~")
     
@@ -99,22 +75,43 @@ def ai_interpret(instruction, media_path=None):
         except Exception as e:
             log(f"Context error: {e}")
     
-    prompt_text = """
-    You are an AI bridge between a User's phone and their {os_name} terminal.
-    Translating natural language into safe {os_name} bash commands.
+    prompt_text = f"""
+    You are an AI bridge. You translate natural language to safe macOS bash commands.
     
-    STRICT RULES FOR RECEIVED FILES:
-    - If the user sends a file and says 'save it', you MUST use the SOURCE_PATH provided in the CONTEXT.
-    - To save a file: Use `mv SOURCE_PATH destination` (e.g., `mv /path/to/media/123.jpg ~/Downloads/`).
-    - Using `mv` is preferred over `cp` to keep the media folder clean.
-    - Path Translation: {home_dir} is the user's home (~).
+    CRITICAL FILE HANDLING RULES:
+    1. If the user sends a file/image and says 'save it' or similar:
+       - THE SOURCE IS: '{media_path}'
+       - THE DESTINATION IS: Whatever path the user mentioned (e.g. {home_dir}/Downloads).
+       - COMMAND MUST BE: `mv {media_path} <destination>`
     
-    GENERAL RULES:
-    1. Respond ONLY with safe bash commands, ONE PER LINE. No explanation.
-    2. Use `UPLOAD: <filepath>` ONLY to send a file BACK to the user's phone.
-    3. CWD: {cwd} | Home: {home_dir}
-    {context}
-    """.format(cwd=os.getcwd(), provider=provider, model=current_model, os_name=system_os, user=username, home_dir=home_dir, context=context_str)
+    2. NEVER SWAP THE DIRECTION. The file at {media_path} is the one you must move.
+    3. Use absolute paths or {home_dir} (~).
+    4. Respond ONLY with safe bash commands, ONE PER LINE. No explanation.
+    5. CWD: {os.getcwd()} | Home: {home_dir}
+    {context_str}
+    """
+    
+    content_parts = [f"INSTRUCTION: {instruction}"]
+    
+    if media_path and os.path.exists(media_path):
+        ext = os.path.splitext(media_path)[1].lower()
+        is_audio = ext in ['.ogg', '.mp3', '.wav', '.m4a']
+        is_visual = ext in ['.jpg', '.jpeg', '.png', '.webp']
+        
+        log(f"📂 Processing Media: {media_path}")
+
+        try:
+            if model and (is_audio or is_visual):
+                # Upload to Gemini so it has visual/audio context
+                media_file = genai.upload_file(path=media_path)
+                content_parts.append(media_file)
+        except Exception as e:
+            log(f"Media upload error: {e}")
+    
+    provider = os.getenv("AI_PROVIDER", "gemini").lower()
+    current_model = os.getenv("OLLAMA_MODEL", "gemma:2b") if provider == "ollama" else "gemini"
+    system_os = platform.system()
+    
     
     text_response = ""
     

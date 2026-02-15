@@ -264,10 +264,15 @@ function ollama_mgr() {
                 exit 1
             fi
 
-            echo "⬇️  Pulling base model: $MODEL_NAME..."
-            if ! ollama pull "$MODEL_NAME"; then
-                echo "❌ Failed to pull model '$MODEL_NAME'. Check model name."
-                exit 1
+            # Check if model already exists locally
+            if ollama list | grep -q "$MODEL_NAME"; then
+                echo "✅ Model '$MODEL_NAME' found locally. Skipping download."
+            else
+                echo "⬇️  Pulling base model: $MODEL_NAME..."
+                if ! ollama pull "$MODEL_NAME"; then
+                    echo "❌ Failed to pull model '$MODEL_NAME'. Check model name."
+                    exit 1
+                fi
             fi
             
             # Create Custom Modelfile

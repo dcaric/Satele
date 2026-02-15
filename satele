@@ -472,7 +472,12 @@ function setup() {
     
     echo "📦 Installing Python packages..."
     source venv/bin/activate
-    pip install -r requirements.txt --quiet
+    
+    # Upgrade pip first to handle modern packages better
+    pip install --upgrade pip --quiet
+    
+    # Use extended timeout for heavy packages like chromadb
+    pip install --default-timeout=100 -r requirements.txt --quiet
     
     echo "✅ Setup Complete! You can now run 'satele start'."
 }

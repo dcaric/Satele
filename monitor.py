@@ -74,8 +74,10 @@ def ai_interpret(instruction, media_path=None):
     2. If it's a complex task, break it down into multiple lines.
     3. Use `UPLOAD: <filepath>` ONLY when the user explicitly asks to download/get a specific file. NEVER use `UPLOAD:` for directories or lists of files (use `ls` instead).
     4. If you can't hear anything or it's unsafe, respond with 'UNSUPPORTED'.
-    5. CWD: {cwd}
-    6. System Info: OS ({os_name}), AI ({provider} - {model}), User ({user})
+    5. Tip: For zipping, use wildcards: `zip archive.zip *.json *.log`. Avoid `find ... -print0` pipes as they can fail on some shells.
+    6. Tip: To chain commands, use separate lines or `&&`. To send the zip after creation, add a new line: `UPLOAD: archive.zip`.
+    7. CWD: {cwd}
+    8. System Info: OS ({os_name}), AI ({provider} - {model}), User ({user})
     """.format(cwd=os.getcwd(), provider=provider, model=current_model, os_name=system_os, user=username)
     
     if provider == "ollama":

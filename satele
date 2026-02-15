@@ -19,27 +19,27 @@ export BRIDGE_SECRET_KEY="default-secret-key"
 function update_env() {
     local KEY=$1
     local VAL=$2
-    if [ ! -f "$BASE_DIR/.env" ]; then echo "$KEY=$VAL" > "$BASE_DIR/.env"; return; fi
+    if [ ! -f "$BASE_DIR/satele_cfg.env" ]; then echo "$KEY=$VAL" > "$BASE_DIR/satele_cfg.env"; return; fi
 
-    if grep -q "^$KEY=" "$BASE_DIR/.env"; then
+    if grep -q "^$KEY=" "$BASE_DIR/satele_cfg.env"; then
         if [ "$OS_TYPE" == "Darwin" ]; then
             # macOS requires empty string for inplace no backup
-            sed -i '' "s|^$KEY=.*|$KEY=$VAL|" "$BASE_DIR/.env"
+            sed -i '' "s|^$KEY=.*|$KEY=$VAL|" "$BASE_DIR/satele_cfg.env"
         else
             # Linux (GNU sed) standard
-            sed -i "s|^$KEY=.*|$KEY=$VAL|" "$BASE_DIR/.env"
+            sed -i "s|^$KEY=.*|$KEY=$VAL|" "$BASE_DIR/satele_cfg.env"
         fi
     else
         # Append new
-        echo "$KEY=$VAL" >> "$BASE_DIR/.env"
+        echo "$KEY=$VAL" >> "$BASE_DIR/satele_cfg.env"
     fi
 }
 
 function get_env_var() {
     local KEY=$1
     local DEFAULT=$2
-    if [ -f "$BASE_DIR/.env" ]; then
-        local VAL=$(grep "^$KEY=" "$BASE_DIR/.env" | cut -d '=' -f2)
+    if [ -f "$BASE_DIR/satele_cfg.env" ]; then
+        local VAL=$(grep "^$KEY=" "$BASE_DIR/satele_cfg.env" | cut -d '=' -f2)
         if [ -z "$VAL" ]; then echo "$DEFAULT"; else echo "$VAL"; fi
     else
         echo "$DEFAULT"
@@ -54,11 +54,11 @@ function start() {
     mkdir -p media
     rm -f media/*
 
-    # Load Config from .env to capture vars
+    # Load Config from satele_cfg.env to capture vars
     NAME="satele"
-    if [ -f "$BASE_DIR/.env" ]; then
+    if [ -f "$BASE_DIR/satele_cfg.env" ]; then
         set -a
-        source "$BASE_DIR/.env"
+        source "$BASE_DIR/satele_cfg.env"
         set +a
         if [ -n "$BOT_TRIGGER" ]; then NAME="$BOT_TRIGGER"; fi
     fi
@@ -66,7 +66,7 @@ function start() {
     # 1. Start FastAPI Server
     if ! pgrep -f "Python server/main.py" > /dev/null; then
         source venv/bin/activate
-        nohup python3 server/main.py >> satele.log 2>&1 &
+        nohup python3 server/main.py >> /tmp/satele_dcaric.log 2>&1 &
         echo "✅ FastAPI Server Started on Port 8000"
     else
         echo "✅ FastAPI Server already running."
@@ -74,7 +74,7 @@ function start() {
 
     # 2. Start WhatsApp Bridge
     if ! pgrep -f "node whatsapp_bridge.js" > /dev/null; then
-        BOT_TRIGGER="$NAME" nohup node whatsapp_bridge.js >> satele.log 2>&1 &
+        BOT_TRIGGER="$NAME" nohup node whatsapp_bridge.js >> /tmp/satele_dcaric.log 2>&1 &
         echo "✅ WhatsApp Bridge Started"
     else
         echo "✅ WhatsApp Bridge already running."
@@ -83,14 +83,14 @@ function start() {
     # 3. Start AI Monitor
     if ! pgrep -f "monitor.py" > /dev/null; then
         source venv/bin/activate
-        nohup python3 monitor.py >> satele.log 2>&1 &
+        nohup python3 monitor.py >> /tmp/satele_dcaric.log 2>&1 &
         echo "✅ AI Monitor (Brain) Started"
     else
         echo "✅ AI Monitor already running."
     fi
     
     echo "✅ Satele is now active in the background."
-    echo "📄 Check logs with: tail -f satele.log"
+    echo "📄 Check logs with: tail -f /tmp/satele_dcaric.log"
 }
 
 function stop() {
@@ -108,19 +108,19 @@ function set_name() {
         exit 1
     fi
     
-    # Update .env file
-    if [ -f "$BASE_DIR/.env" ]; then
-        if grep -q "BOT_TRIGGER=" "$BASE_DIR/.env"; then
+    # Update satele_cfg.env file
+    if [ -f "$BASE_DIR/satele_cfg.env" ]; then
+        if grep -q "BOT_TRIGGER=" "$BASE_DIR/satele_cfg.env"; then
             # Replace existing
-            sed -i '' "s/BOT_TRIGGER=.*/BOT_TRIGGER=$NEW_NAME/" "$BASE_DIR/.env"
+            sed -i '' "s/BOT_TRIGGER=.*/BOT_TRIGGER=$NEW_NAME/" "$BASE_DIR/satele_cfg.env"
         else
             # Append new
-            echo "BOT_TRIGGER=$NEW_NAME" >> "$BASE_DIR/.env"
+            echo "BOT_TRIGGER=$NEW_NAME" >> "$BASE_DIR/satele_cfg.env"
         fi
         echo "✅ Trigger name updated to: $NEW_NAME"
         echo "🔄 Note: You must restart satele (stop/start) to apply the change."
     else
-        echo "❌ .env file not found. Run start first."
+        echo "❌ satele_cfg.env file not found. Run start first."
     fi
 }
 
@@ -166,10 +166,11 @@ function status() {
     echo "$BRAIN_STATUS"
     
     # Memory Check
-    if [ -d "satele_memory" ]; then
+    if [ -d "$BASE_DIR/brain/satele_memory" ]; then
         # Use python to get count (might take ~1s)
-        if [ -d "venv" ]; then source venv/bin/activate >/dev/null 2>&1; fi
-        local MEM_COUNT=$(python3 memory.py status 2>/dev/null)
+        if [ -d "$BASE_DIR/venv" ]; then source "$BASE_DIR/venv/bin/activate" >/dev/null 2>&1; fi
+        # Cd to BASE_DIR/brain to run python script correctly
+        local MEM_COUNT=$(cd "$BASE_DIR/brain" && python3 memory.py status 2>/dev/null)
         echo "📚 Memory: Active ($MEM_COUNT records)"
     else
         echo "📚 Memory: Empty/Not Instantiated"
@@ -179,10 +180,10 @@ function status() {
 
 function memory_status() {
     echo "🧠 Satele Long-Term Memory Inspection"
-    cd "$BASE_DIR"
+    cd "$BASE_DIR/brain"
     if [ -d "satele_memory" ]; then
-        echo "📂 DB Path: $BASE_DIR/satele_memory"
-        if [ -d "venv" ]; then source venv/bin/activate; fi
+        echo "📂 DB Path: $BASE_DIR/brain/satele_memory"
+        if [ -d "$BASE_DIR/venv" ]; then source "$BASE_DIR/venv/bin/activate"; fi
         echo "⏳ Calculating stats..."
         local COUNT=$(python3 memory.py status)
         echo "📊 Total Embeddings: $COUNT"
@@ -217,27 +218,27 @@ function set_gemini_key() {
         exit 1
     fi
 
-    # Check if .env exists, if not create from example
-    if [ ! -f "$BASE_DIR/.env" ]; then
-        if [ -f "$BASE_DIR/.env.example" ]; then
-            cp "$BASE_DIR/.env.example" "$BASE_DIR/.env"
-            echo "📝 Created .env from .env.example"
+    # Check if satele_cfg.env exists, if not create from example
+    if [ ! -f "$BASE_DIR/satele_cfg.env" ]; then
+        if [ -f "$BASE_DIR/satele_cfg.env.example" ]; then
+            cp "$BASE_DIR/satele_cfg.env.example" "$BASE_DIR/satele_cfg.env"
+            echo "📝 Created satele_cfg.env from satele_cfg.env.example"
         else
-            echo "⚠️  .env.example not found, creating new .env"
-            echo "REMOTE_BRIDGE_URL=http://localhost:8000" > "$BASE_DIR/.env"
-            echo "BRIDGE_SECRET_KEY=default-secret-key" >> "$BASE_DIR/.env"
-            echo "BOT_TRIGGER=satele" >> "$BASE_DIR/.env"
+            echo "⚠️  satele_cfg.env.example not found, creating new satele_cfg.env"
+            echo "REMOTE_BRIDGE_URL=http://localhost:8000" > "$BASE_DIR/satele_cfg.env"
+            echo "BRIDGE_SECRET_KEY=default-secret-key" >> "$BASE_DIR/satele_cfg.env"
+            echo "BOT_TRIGGER=satele" >> "$BASE_DIR/satele_cfg.env"
         fi
     fi
     
     # Update or Add GOOGLE_API_KEY
-    if grep -q "GOOGLE_API_KEY=" "$BASE_DIR/.env"; then
+    if grep -q "GOOGLE_API_KEY=" "$BASE_DIR/satele_cfg.env"; then
         # Replace existing key (using a temp file strategy for cross-platform compat)
-        sed "s|GOOGLE_API_KEY=.*|GOOGLE_API_KEY=$NEW_KEY|" "$BASE_DIR/.env" > "$BASE_DIR/.env.tmp" && mv "$BASE_DIR/.env.tmp" "$BASE_DIR/.env"
+        sed "s|GOOGLE_API_KEY=.*|GOOGLE_API_KEY=$NEW_KEY|" "$BASE_DIR/satele_cfg.env" > "$BASE_DIR/satele_cfg.env.tmp" && mv "$BASE_DIR/satele_cfg.env.tmp" "$BASE_DIR/satele_cfg.env"
         echo "✅ Updated existing GOOGLE_API_KEY."
     else
         # Append new key
-        echo "GOOGLE_API_KEY=$NEW_KEY" >> "$BASE_DIR/.env"
+        echo "GOOGLE_API_KEY=$NEW_KEY" >> "$BASE_DIR/satele_cfg.env"
         echo "✅ Added new GOOGLE_API_KEY."
     fi
     
@@ -322,7 +323,7 @@ function add_number() {
     # Clean number (remove + and spaces)
     NUM=$(echo "$NUM" | tr -d '+ ')
     
-    CURRENT=$(grep "^ALLOWED_NUMBERS=" "$BASE_DIR/.env" | cut -d= -f2)
+    CURRENT=$(grep "^ALLOWED_NUMBERS=" "$BASE_DIR/satele_cfg.env" | cut -d= -f2)
     if [ -z "$CURRENT" ]; then
         update_env "ALLOWED_NUMBERS" "$NUM"
     else
@@ -342,7 +343,7 @@ function remove_number() {
     if [ -z "$NUM" ]; then echo "❌ Usage: satele remove-number <mobile_number>"; return 1; fi
     NUM=$(echo "$NUM" | tr -d '+ ')
     
-    CURRENT=$(grep "^ALLOWED_NUMBERS=" "$BASE_DIR/.env" | cut -d= -f2)
+    CURRENT=$(grep "^ALLOWED_NUMBERS=" "$BASE_DIR/satele_cfg.env" | cut -d= -f2)
     # Remove number from comma list
     # Logic: convert commas to newlines, grep -v, paste back
     NEW=$(echo "$CURRENT" | tr ',' '\n' | grep -v "^$NUM$" | paste -sd, -)
@@ -353,7 +354,7 @@ function remove_number() {
 }
 
 function list_numbers() {
-    CURRENT=$(grep "^ALLOWED_NUMBERS=" "$BASE_DIR/.env" | cut -d= -f2)
+    CURRENT=$(grep "^ALLOWED_NUMBERS=" "$BASE_DIR/satele_cfg.env" | cut -d= -f2)
     if [ -z "$CURRENT" ]; then
         echo "📭 No extra numbers allowed (Only 'Me' is allowed by default)."
     else
@@ -504,7 +505,7 @@ function help() {
     echo "  help                Show this message"
     echo ""
     echo "Logs:"
-    echo "  tail -f $BASE_DIR/satele.log"
+    echo "  tail -f $BASE_DIR//tmp/satele_dcaric.log"
 }
 
 # Command Router

@@ -8,13 +8,17 @@ import google.generativeai as genai
 import re
 from dotenv import load_dotenv
 
-# Load environment variables from specific config file
-# Using config_v2.env to avoid MacOS 'Operation not permitted' on old files
-env_name = "config_v2.env"
-env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), env_name)
+# Determine and store the project root
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Load environment variables from consolidated satele.config
+env_path = os.path.join(PROJECT_ROOT, "satele.config")
 if not os.path.exists(env_path):
-    env_name = "satele_brain.env"
-    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), env_name)
+    # Search root satele_cfg.env as fallback
+    env_path = os.path.join(PROJECT_ROOT, "satele_cfg.env")
+    if not os.path.exists(env_path):
+        # Local brain fallback
+        env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config_v2.env")
 
 load_dotenv(env_path)
 print(f"📝 Config loaded from: {env_path}")
@@ -25,9 +29,6 @@ try:
 except Exception as e:
     print(f"⚠️ Memory Init Warning: {e}")
     brain_memory = None
-
-# Determine and store the project root (where monitor.py is located)
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Move back to project root so commands execute in correct context
 # but only if we are in the 'brain' subdirectory

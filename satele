@@ -41,13 +41,13 @@ export BRIDGE_SECRET_KEY="default-secret-key"
 function update_env() {
     local KEY=$1
     local VAL=$2
-    local ENV_FILE="$BASE_DIR/satele_cfg.env"
+    local ENV_FILE="$BASE_DIR/satele.config"
     
     # If missing, try to initialize
     if [ ! -f "$ENV_FILE" ]; then
-        if [ -f "$BASE_DIR/satele_cfg.env.example" ]; then
-            cp "$BASE_DIR/satele_cfg.env.example" "$ENV_FILE"
-            echo "📝 Initialized satele_cfg.env from example."
+        if [ -f "$BASE_DIR/satele.config.example" ]; then
+            cp "$BASE_DIR/satele.config.example" "$ENV_FILE"
+            echo "📝 Initialized satele.config from example."
         elif [ -f "$BASE_DIR/.env" ]; then
             # Migrate basic vars if old .env exists
             cp "$BASE_DIR/.env" "$ENV_FILE"
@@ -71,8 +71,8 @@ function update_env() {
 function get_env_var() {
     local KEY=$1
     local DEFAULT=$2
-    if [ -f "$BASE_DIR/satele_cfg.env" ]; then
-        local VAL=$(grep "^$KEY=" "$BASE_DIR/satele_cfg.env" | cut -d '=' -f2)
+    if [ -f "$BASE_DIR/satele.config" ]; then
+        local VAL=$(grep "^$KEY=" "$BASE_DIR/satele.config" | cut -d '=' -f2)
         if [ -z "$VAL" ]; then echo "$DEFAULT"; else echo "$VAL"; fi
     else
         echo "$DEFAULT"
@@ -88,18 +88,18 @@ function start() {
     rm -f media/*
 
     # Load Config (Auto-migrate if missing)
-    local ENV_FILE="$BASE_DIR/satele_cfg.env"
+    local ENV_FILE="$BASE_DIR/satele.config"
     
     # Check if ENV_FILE is a directory (Docker volume issue) and handle it
     if [ ! -f "$ENV_FILE" ] && [ -d "$ENV_FILE" ]; then
         echo "⚠️ $ENV_FILE is a directory! (Likely Docker mounting issue)"
-        echo "Please delete it on host and create a file: touch satele_cfg.env"
+        echo "Please delete it on host and create a file: touch satele.config"
         exit 1
     fi
 
     if [ ! -f "$ENV_FILE" ]; then
-        if [ -f "$BASE_DIR/satele_cfg.env.example" ]; then
-            cp "$BASE_DIR/satele_cfg.env.example" "$ENV_FILE"
+        if [ -f "$BASE_DIR/satele.config.example" ]; then
+            cp "$BASE_DIR/satele.config.example" "$ENV_FILE"
         else
             touch "$ENV_FILE"
         fi
@@ -111,9 +111,6 @@ function start() {
     set +a
     
     NAME=${BOT_TRIGGER:-"satele"}
-
-    # Sync config to Brain subdirectory (for monitor.py)
-    cp "$ENV_FILE" "$BASE_DIR/brain/.env" 2>/dev/null
 
     # Determine Python Interpreter (venv or system)
     PYTHON_CMD="python3"
@@ -171,13 +168,13 @@ function status() {
     if pgrep -f "monitor.py" > /dev/null; then echo "🔹 AI Monitor: RUNNING"; else echo "🔸 AI Monitor: STOPPED"; fi
 
     # Get AI Provider and Model
-    local AI_PROVIDER=$(grep "^AI_PROVIDER=" "$BASE_DIR/satele_cfg.env" | cut -d '=' -f2)
+    local AI_PROVIDER=$(grep "^AI_PROVIDER=" "$BASE_DIR/satele.config" | cut -d '=' -f2)
     if [ -z "$AI_PROVIDER" ]; then AI_PROVIDER="gemini"; fi
     
-    local GEMINI_MODEL=$(grep "^GEMINI_MODEL=" "$BASE_DIR/satele_cfg.env" | cut -d '=' -f2)
+    local GEMINI_MODEL=$(grep "^GEMINI_MODEL=" "$BASE_DIR/satele.config" | cut -d '=' -f2)
     if [ -z "$GEMINI_MODEL" ]; then GEMINI_MODEL="gemini-2.0-flash"; fi
     
-    local OLLAMA_MODEL=$(grep "^OLLAMA_MODEL=" "$BASE_DIR/satele_cfg.env" | cut -d '=' -f2)
+    local OLLAMA_MODEL=$(grep "^OLLAMA_MODEL=" "$BASE_DIR/satele.config" | cut -d '=' -f2)
     if [ -z "$OLLAMA_MODEL" ]; then OLLAMA_MODEL="gemma:2b"; fi
 
     local BRAIN_STATUS=""
@@ -192,9 +189,9 @@ function status() {
             local OUT=$(grep -o '"out": [0-9]*' "$BASE_DIR/token_usage.json" | cut -d ' ' -f2)
             
             # Cost calc
-            local P_IN=$(grep "^GEMINI_PRICE_IN=" "$BASE_DIR/satele_cfg.env" | cut -d '=' -f2)
+            local P_IN=$(grep "^GEMINI_PRICE_IN=" "$BASE_DIR/satele.config" | cut -d '=' -f2)
             if [ -z "$P_IN" ]; then P_IN="0"; fi
-            local P_OUT=$(grep "^GEMINI_PRICE_OUT=" "$BASE_DIR/satele_cfg.env" | cut -d '=' -f2)
+            local P_OUT=$(grep "^GEMINI_PRICE_OUT=" "$BASE_DIR/satele.config" | cut -d '=' -f2)
             if [ -z "$P_OUT" ]; then P_OUT="0"; fi
             
             # Simple bash float math (using awk)
@@ -262,27 +259,27 @@ function set_gemini_key() {
         exit 1
     fi
 
-    # Check if satele_cfg.env exists, if not create from example
-    if [ ! -f "$BASE_DIR/satele_cfg.env" ]; then
-        if [ -f "$BASE_DIR/satele_cfg.env.example" ]; then
-            cp "$BASE_DIR/satele_cfg.env.example" "$BASE_DIR/satele_cfg.env"
-            echo "📝 Created satele_cfg.env from satele_cfg.env.example"
+    # Check if satele.config exists, if not create from example
+    if [ ! -f "$BASE_DIR/satele.config" ]; then
+        if [ -f "$BASE_DIR/satele.config.example" ]; then
+            cp "$BASE_DIR/satele.config.example" "$BASE_DIR/satele.config"
+            echo "📝 Created satele.config from satele.config.example"
         else
-            echo "⚠️  satele_cfg.env.example not found, creating new satele_cfg.env"
-            echo "REMOTE_BRIDGE_URL=http://localhost:8000" > "$BASE_DIR/satele_cfg.env"
-            echo "BRIDGE_SECRET_KEY=default-secret-key" >> "$BASE_DIR/satele_cfg.env"
-            echo "BOT_TRIGGER=satele" >> "$BASE_DIR/satele_cfg.env"
+            echo "⚠️  satele.config.example not found, creating new satele.config"
+            echo "REMOTE_BRIDGE_URL=http://localhost:8000" > "$BASE_DIR/satele.config"
+            echo "BRIDGE_SECRET_KEY=default-secret-key" >> "$BASE_DIR/satele.config"
+            echo "BOT_TRIGGER=satele" >> "$BASE_DIR/satele.config"
         fi
     fi
     
     # Update or Add GOOGLE_API_KEY
-    if grep -q "GOOGLE_API_KEY=" "$BASE_DIR/satele_cfg.env"; then
+    if grep -q "GOOGLE_API_KEY=" "$BASE_DIR/satele.config"; then
         # Replace existing key (using a temp file strategy for cross-platform compat)
-        sed "s|GOOGLE_API_KEY=.*|GOOGLE_API_KEY=$NEW_KEY|" "$BASE_DIR/satele_cfg.env" > "$BASE_DIR/satele_cfg.env.tmp" && mv "$BASE_DIR/satele_cfg.env.tmp" "$BASE_DIR/satele_cfg.env"
+        sed "s|GOOGLE_API_KEY=.*|GOOGLE_API_KEY=$NEW_KEY|" "$BASE_DIR/satele.config" > "$BASE_DIR/satele.config.tmp" && mv "$BASE_DIR/satele.config.tmp" "$BASE_DIR/satele.config"
         echo "✅ Updated existing GOOGLE_API_KEY."
     else
         # Append new key
-        echo "GOOGLE_API_KEY=$NEW_KEY" >> "$BASE_DIR/satele_cfg.env"
+        echo "GOOGLE_API_KEY=$NEW_KEY" >> "$BASE_DIR/satele.config"
         echo "✅ Added new GOOGLE_API_KEY."
     fi
     
@@ -367,7 +364,7 @@ function add_number() {
     # Clean number (remove + and spaces)
     NUM=$(echo "$NUM" | tr -d '+ ')
     
-    CURRENT=$(grep "^ALLOWED_NUMBERS=" "$BASE_DIR/satele_cfg.env" | cut -d= -f2)
+    CURRENT=$(grep "^ALLOWED_NUMBERS=" "$BASE_DIR/satele.config" | cut -d= -f2)
     if [ -z "$CURRENT" ]; then
         update_env "ALLOWED_NUMBERS" "$NUM"
     else
@@ -387,7 +384,7 @@ function remove_number() {
     if [ -z "$NUM" ]; then echo "❌ Usage: satele remove-number <mobile_number>"; return 1; fi
     NUM=$(echo "$NUM" | tr -d '+ ')
     
-    CURRENT=$(grep "^ALLOWED_NUMBERS=" "$BASE_DIR/satele_cfg.env" | cut -d= -f2)
+    CURRENT=$(grep "^ALLOWED_NUMBERS=" "$BASE_DIR/satele.config" | cut -d= -f2)
     # Remove number from comma list
     # Logic: convert commas to newlines, grep -v, paste back
     NEW=$(echo "$CURRENT" | tr ',' '\n' | grep -v "^$NUM$" | paste -sd, -)
@@ -398,7 +395,7 @@ function remove_number() {
 }
 
 function list_numbers() {
-    CURRENT=$(grep "^ALLOWED_NUMBERS=" "$BASE_DIR/satele_cfg.env" | cut -d= -f2)
+    CURRENT=$(grep "^ALLOWED_NUMBERS=" "$BASE_DIR/satele.config" | cut -d= -f2)
     if [ -z "$CURRENT" ]; then
         echo "📭 No extra numbers allowed (Only 'Me' is allowed by default)."
     else

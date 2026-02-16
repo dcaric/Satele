@@ -30,15 +30,18 @@ Using Docker is the recommended way to run Satele on Windows or for clean, isola
 git clone https://github.com/dcaric/Satele.git ~/satele
 cd ~/satele
 
-# 2. Fix Config (Important for Windows)
-# Docker mounts satele_cfg.env as a file. If it doesn't exist, Docker creates a directory (error).
-touch satele_cfg.env 
-
-# 3. Launch
+# 2. Launch
 docker-compose up -d
 ```
 
-### 3. Configuring Satele in Docker
+### ⚙️ Configuration
+The primary configuration file is `satele.config` in the project root. 
+
+> **Note for macOS Users:** If you encounter `Operation not permitted` errors, the system has likely locked the old `.env` files. Satele now uses `satele.config` to bypass these restrictions.
+
+1. **Initialize config**: `touch satele.config` (The starter will populate it on first launch).
+2. **Set your Gemini Key**: `./satele geminikey YOUR_KEY_HERE`
+3. **Set the bot name**: `./satele name m3`
 Since Satele runs inside a container, you use `docker exec` to send configuration commands.
 
 **📱 Link WhatsApp:**

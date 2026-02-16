@@ -35,5 +35,7 @@ brain/.cache/
 brain/monitor.py.bak
 config_test.env
 brain/config_v2.env
+satele.config
+satele.config.tmp
 
 *.zip

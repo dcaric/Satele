@@ -1,0 +1,5 @@
+? (192.168.68.1) at 30:68:93:5:f6:c4 on en1 ifscope [ethernet]
+? (192.168.68.52) at 62:88:f4:b0:58:c8 on en1 ifscope permanent [ethernet]
+? (192.168.68.53) at ac:bc:b5:ca:2f:1a on en1 ifscope [ethernet]
+? (192.168.68.55) at 58:d3:49:10:9d:20 on en1 ifscope [ethernet]
+mdns.mcast.net (224.0.0.251) at 1:0:5e:0:0:fb on en1 ifscope permanent [ethernet]

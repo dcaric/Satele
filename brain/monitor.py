@@ -71,26 +71,8 @@ def run_shell(cmd):
         return f"Execution Error: {str(e)}"
 
 def get_skills_context(instruction=None):
-    """
-    Get relevant skills using semantic search.
-    If instruction is provided, returns top 5 most relevant skills.
-    Otherwise, returns all skills (for backward compatibility).
-    """
-    from skill_indexer import get_skill_indexer
-    
-    try:
-        indexer = get_skill_indexer(PROJECT_ROOT)
-        
-        if instruction:
-            # Semantic search for relevant skills
-            return indexer.search_skills(instruction, top_k=5)
-        else:
-            # Return all skills (fallback)
-            return indexer.get_all_skills()
-    except Exception as e:
-        log(f"⚠️ Skill indexer error: {e}")
-        # Fallback to old method if indexer fails
-        return get_skills_context_legacy()
+    # Temporarily bypass indexer due to slow model download
+    return get_skills_context_legacy()
 
 def get_skills_context_legacy():
     """Legacy skill loading (fallback if indexer fails)"""
@@ -118,22 +100,19 @@ def get_skills_context_legacy():
                         if line.startswith("name:"):
                             name = line.replace("name:", "").strip()
                     
-                    # Extract script usage and convert to absolute path
+                    # Extract command (support python3, bash, or direct shell commands like ls, find, cat, head, realpath)
                     script_usage = ""
-                    match = re.search(r'`((?:python3|bash) .agent/skills/([^`]+))`', content)
+                    match = re.search(r'`((?:python3|bash|ls|find|cat|head|realpath) [^`]+)`', content)
                     if match:
-                        full_cmd = match.group(1)
-                        # Extract the command prefix (python3 or bash)
-                        cmd_parts = full_cmd.split(' ', 1)
-                        cmd_prefix = cmd_parts[0]
-                        rel_path = f".agent/skills/{match.group(2)}"
-                        abs_path = os.path.join(PROJECT_ROOT, rel_path)
-                        script_usage = f"{cmd_prefix} {abs_path}"
+                        script_usage = match.group(1)
+                        # If it's a script in .agent/skills/, ensure it has absolute path
+                        if ".agent/skills/" in script_usage:
+                            # Use regex to find the relative path and replace with absolute
+                            script_usage = re.sub(r'\.?agent/skills/', os.path.join(PROJECT_ROOT, ".agent/skills/"), script_usage)
                     
-                    if desc:
+                    if desc and script_usage:
                         skills_context += f"- {name}: {desc}\n"
-                        if script_usage:
-                            skills_context += f"  COMMAND: {script_usage}\n"
+                        skills_context += f"  COMMAND: {script_usage}\n"
                         found_any = True
     except Exception as e:
         log(f"Error loading skills: {e}")
@@ -556,31 +535,37 @@ def monitor_loop():
             
             if response.status_code == 200:
                 task = response.json()
-                task_id = task['id']
-                instruction = task['instruction']
-                media_path = task.get('media_path')
-                
-                log(f"📥 New Task [{task_id}]: {instruction}")
-                
-                # Satele Logic: If the user says "use gravity", we let the Antigravity Agent handle it.
-                if "use gravity" in instruction.lower():
-                    log(f"🧠 Handoff: '{instruction}' -> Letting Antigravity Agent handle this.")
-                    continue
+                if not task:
+                    # No tasks in queue
+                    pass
+                else:
+                    task_id = task.get('id')
+                    instruction = task.get('instruction')
+                    media_path = task.get('media_path')
+                    
+                    if task_id:
+                        log(f"📥 New Task [{task_id}]: {instruction}")
+                        
+                        # Satele Logic: If the user says "use gravity", we let the Antigravity Agent handle it.
+                        if instruction and "use gravity" in instruction.lower():
+                            log(f"🧠 Handoff: '{instruction}' -> Letting Antigravity Agent handle this.")
+                            continue
 
-                result = process_instruction(instruction, media_path)
+                        result = process_instruction(instruction, media_path)
+                        
+                        requests.post(
+                            f"{BASE_URL}/report-result",
+                            json={"id": task_id, "output": result},
+                            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
+                            timeout=5
+                        )
+                        log(f"✅ Result sent for {task_id}")
                 
-                requests.post(
-                    f"{BASE_URL}/report-result",
-                    json={"id": task_id, "output": result},
-                    headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
-                    timeout=5
-                )
-                log(f"✅ Result sent for {task_id}")
-                
-        except Exception:
-            pass
-            
-        time.sleep(5)
+        except Exception as e:
+            log(f"❌ Monitor Loop Error: {e}")
+            import traceback
+            log(traceback.format_exc())
+            time.sleep(5)
 
 if __name__ == "__main__":
     monitor_loop()

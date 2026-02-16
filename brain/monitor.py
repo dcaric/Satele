@@ -5,7 +5,14 @@ import requests
 import json
 import platform
 import google.generativeai as genai
+import re
 from dotenv import load_dotenv
+
+# Load environment variables from specific config file
+# Using satele_brain.env to avoid MacOS 'Operation not permitted' on .env
+env_name = "satele_brain.env"
+env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), env_name)
+load_dotenv(env_path)
 
 try:
     from memory import Memory
@@ -14,19 +21,19 @@ except Exception as e:
     print(f"⚠️ Memory Init Warning: {e}")
     brain_memory = None
 
+# Determine and store the project root (where monitor.py is located)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 # Move back to project root so commands execute in correct context
 # but only if we are in the 'brain' subdirectory
 if os.path.basename(os.getcwd()) == "brain":
     os.chdir("..")
-    print(f"[Monitor] Moved to root: {os.getcwd()}")
+    log(f"🏠 Set Project Root: {os.getcwd()}")
 
-# Load environment variables from .env
-# This will now load from brain/.env because dotenv search logic? 
-# No, let's be explicit.
-load_dotenv("brain/.env")
+# Environment variables loaded at top level
 
 def log(msg):
-    print(f"[Monitor] {msg}")
+    print(f"[Monitor] {msg}", flush=True)
 
 # Configuration
 BASE_URL = os.getenv("REMOTE_BRIDGE_URL", "http://localhost:8000")
@@ -44,6 +51,8 @@ else:
     model = None
     log_brain = "⚠️ No GOOGLE_API_KEY found. Falling back to simple shell mapping."
 
+log(f"🌍 Startup Environment: Provider={os.getenv('AI_PROVIDER')} | Bot={os.getenv('BOT_TRIGGER')}")
+
 def run_shell(cmd):
     try:
         # Prevent dangerous or interactive commands
@@ -54,6 +63,56 @@ def run_shell(cmd):
         return (result.stdout + result.stderr).strip() or "Success (No output)"
     except Exception as e:
         return f"Execution Error: {str(e)}"
+
+def get_skills_context():
+    """Scans .agent/skills for SKILL.md files to inject into AI prompt."""
+    skills_dir = os.path.join(PROJECT_ROOT, ".agent", "skills")
+
+    if not os.path.exists(skills_dir):
+        log(f"⚠️ Skills directory not found: {skills_dir}")
+        return ""
+    
+    skills_context = "\n🚀 AVAILABLE SKILLS & CUSTOM SCRIPTS:\n"
+    found_any = False
+    
+    try:
+        for skill_name in os.listdir(skills_dir):
+            skill_path = os.path.join(skills_dir, skill_name, "SKILL.md")
+            if os.path.exists(skill_path):
+                with open(skill_path, "r") as f:
+                    content = f.read()
+                    desc = ""
+                    name = skill_name
+                    # Extract metadata from YAML-ish frontmatter
+                    for line in content.split("\n"):
+                        if line.startswith("description:"):
+                            desc = line.replace("description:", "").strip()
+                        if line.startswith("name:"):
+                            name = line.replace("name:", "").strip()
+                    
+                    # Extract script usage and convert to absolute path
+                    script_usage = ""
+                    match = re.search(r'`((?:python3|bash) .agent/skills/([^`]+))`', content)
+                    if match:
+                        full_cmd = match.group(1)
+                        # Extract the command prefix (python3 or bash)
+                        cmd_parts = full_cmd.split(' ', 1)
+                        cmd_prefix = cmd_parts[0]
+                        rel_path = f".agent/skills/{match.group(2)}"
+                        abs_path = os.path.join(PROJECT_ROOT, rel_path)
+                        script_usage = f"{cmd_prefix} {abs_path}"
+                    
+                    if desc:
+                        skills_context += f"- {name}: {desc}\n"
+                        if script_usage:
+                            skills_context += f"  COMMAND: {script_usage}\n"
+                        found_any = True
+    except Exception as e:
+        log(f"Error loading skills: {e}")
+    
+    if found_any:
+        log("✅ Loaded Skills Context with absolute paths.")
+    return skills_context if found_any else ""
 
 def ai_interpret(instruction, media_path=None):
     """
@@ -101,10 +160,13 @@ def ai_interpret(instruction, media_path=None):
     - User Home: {home_dir}
     - Downloads: {home_dir}/Downloads"""
         example_dest = f"{home_dir}/Downloads"
+    
+    skills_str = get_skills_context()
 
     prompt_text = f"""
     You are an AI bridge. You translate natural language to safe bash commands.
     {env_context}
+    {skills_str}
     
     CRITICAL FILE HANDLING RULES:
     1. If the user sends a file/image and says 'save it' or similar:
@@ -116,9 +178,10 @@ def ai_interpret(instruction, media_path=None):
     3. Use absolute paths.
     4. Respond ONLY with safe bash commands, ONE PER LINE. No explanation.
     5. CWD: {os.getcwd()} | Home: {home_dir}
-    6. FOR GUI APPS (Calculator, Chrome), use `sh: open -a "App Name"`.
-    7. IF USER WANTS TO SEND/UPLOAD A FILE (e.g. 'send me x'), USE: `UPLOAD: /absolute/path/to/x`
+    6. FOR GUI APPS (Calculator, Chrome), use `sh: open -a "App Name"`. Do NOT use this for measurement or speed tests.
+    7. TO SEND FILES: Use echo. For specific: `echo "UPLOAD:/Users/dcaric/Working/html.zip"`. For search: `echo "UPLOAD:$(ls -t ml/AntigravityMessages/media/*.png | head -1 | xargs realpath)"`
     8. PRESERVE PATH CASE EXACTLY. Do NOT lowercase project names or folder names.
+    9. SKILLS TAKE PRECEDENCE: If a command is listed in "AVAILABLE SKILLS" that matches the user's intent (e.g. measuring speed), YOU MUST USE THAT COMMAND exactly as shown. Do NOT use generic 'open' commands if a specialized script exists.
     {context_str}
     """
     
@@ -141,6 +204,9 @@ def ai_interpret(instruction, media_path=None):
     
     provider = os.getenv("AI_PROVIDER", "gemini").lower()
     current_model = os.getenv("OLLAMA_MODEL", "gemma:2b") if provider == "ollama" else "gemini"
+    
+    log(f"🧠 AI Provider: {provider} | Model: {current_model}")
+    
     system_os = platform.system()
     
     
@@ -388,6 +454,11 @@ def process_instruction(instruction, media_path=None):
                 
                 log(f"➡️ Running: {cmd}")
                 out = run_shell(cmd)
+                
+                # Check if the command output contains UPLOAD directive
+                if out.strip().upper().startswith("UPLOAD:"):
+                    log(f"📤 Upload detected from command output")
+                    return out.strip()
             
             full_output.append(f"> {cmd}\n{out}")
             
@@ -416,6 +487,7 @@ def monitor_loop():
 
     while True:
         try:
+            log("🔍 Polling for tasks...")
             response = requests.get(
                 f"{BASE_URL}/get-task", 
                 headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
@@ -427,6 +499,8 @@ def monitor_loop():
                 task_id = task['id']
                 instruction = task['instruction']
                 media_path = task.get('media_path')
+                
+                log(f"📥 New Task [{task_id}]: {instruction}")
                 
                 # Satele Logic: If the user says "use gravity", we let the Antigravity Agent handle it.
                 if "use gravity" in instruction.lower():

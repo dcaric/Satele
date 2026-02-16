@@ -2,6 +2,8 @@
 
 Satele is an advanced, multimodal bridge that connects your **WhatsApp** to your **Server/Desktop Environment**. It allows you to control your machine via text or voice commands using AI (Gemini or Ollama).
 
+📖 **[Architecture Documentation](ARCHITECTURE.md)** - Detailed technical documentation
+
 ---
 
 ## 🌍 Supported Platforms

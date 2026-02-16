@@ -484,7 +484,8 @@ def process_instruction(instruction, media_path=None):
                 # Check if the command output contains UPLOAD directive (Scan all lines)
                 target_upload_path = None
                 for line in out.splitlines():
-                    if line.strip().upper().startswith("UPLOAD:"):
+                    # Must be EXACT "UPLOAD:" prefix (case-sensitive) to avoid matching "Upload speed:"
+                    if line.strip().startswith("UPLOAD:"):
                         target_upload_path = line.strip().split(":", 1)[1].strip()
                         break
                 

@@ -9,10 +9,15 @@ import re
 from dotenv import load_dotenv
 
 # Load environment variables from specific config file
-# Using satele_brain.env to avoid MacOS 'Operation not permitted' on .env
-env_name = "satele_brain.env"
+# Using config_v2.env to avoid MacOS 'Operation not permitted' on old files
+env_name = "config_v2.env"
 env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), env_name)
+if not os.path.exists(env_path):
+    env_name = "satele_brain.env"
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), env_name)
+
 load_dotenv(env_path)
+print(f"📝 Config loaded from: {env_path}")
 
 try:
     from memory import Memory
@@ -304,7 +309,8 @@ def ai_interpret(instruction, media_path=None):
 
             text_response = response.text.replace('`', '').strip()
         except Exception as e:
-            log(f"Gemini Error: {e}")
+            log(f"❌ Gemini Error: {e}")
+            if hasattr(e, 'message'): log(f"❌ Gemini Details: {e.message}")
             return None
 
     # Memory Storage

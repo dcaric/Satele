@@ -23,7 +23,7 @@ class SkillIndexer:
     def __init__(self, project_root):
         self.project_root = project_root
         self.skills_dir = os.path.join(project_root, ".agent", "skills")
-        self.cache_file = os.path.join(project_root, "brain", ".skill_index_v3.json")
+        self.cache_file = os.path.join(project_root, "brain", "skills_vault.json")
         
         # Initialize embedding model (lightweight, fast)
         self.model = SentenceTransformer('all-MiniLM-L6-v2')

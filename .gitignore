@@ -29,5 +29,10 @@ satele_memory/
 brain/satele_memory/
 satele_cfg.env
 brain/.env
+brain/satele_brain.env
+brain/.skill_index*
+brain/.cache/
+brain/monitor.py.bak
+config_test.env
 
 *.zip

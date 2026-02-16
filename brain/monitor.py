@@ -198,13 +198,16 @@ def ai_interpret(instruction, media_path=None):
        - COMMAND MUST BE: `mv {media_path} <destination>`
     
     2. NEVER SWAP THE DIRECTION. The file at {media_path} is the one you must move.
-    3. Use absolute paths.
+    3. Use absolute paths for targets outside of your current folder. If referring to your current location (CWD), use `.` or relative paths.
     4. Respond ONLY with safe bash commands, ONE PER LINE. No explanation.
-    5. CWD: {os.getcwd()} | Home: {home_dir}
+    5. YOUR CURRENT LOCATION (CWD): {os.getcwd()}
     6. FOR GUI APPS (Calculator, Chrome), use `sh: open -a "App Name"`. Do NOT use this for measurement or speed tests.
-    7. TO SEND FILES: Use echo. For specific: `echo "UPLOAD:/Users/dcaric/Working/html.zip"`. For search: `echo "UPLOAD:$(ls -t ml/AntigravityMessages/media/*.png | head -1 | xargs realpath)"`
-    8. PRESERVE PATH CASE EXACTLY. Do NOT lowercase project names or folder names.
-    9. SKILLS TAKE PRECEDENCE: If a command is listed in "AVAILABLE SKILLS" that matches the user's intent (e.g. measuring speed), YOU MUST USE THAT COMMAND exactly as shown. Do NOT use generic 'open' commands if a specialized script exists.
+    7. TO SEND FILES: If the user mentions a specific file (e.g., 'send me html.zip'), use `UPLOAD:<filename>`. Only use search if the user is ambiguous (e.g., 'send me the latest image').
+    8. TO FIND LATEST FILE: Use `echo "UPLOAD:$(find . -maxdepth 1 -type f -not -path '*/.*' -exec stat -f "%m %N" {{}} + | sort -rn | head -1 | cut -d' ' -f2- | xargs realpath)"`
+    9. VERIFY BEFORE SENDING: Avoid `UPLOAD` on directories. If a search finds a directory, it will fail.
+    10. PRESERVE PATH CASE EXACTLY. Do NOT lowercase project names or folder names.
+    11. SKILLS TAKE PRECEDENCE: If a command is listed in "AVAILABLE SKILLS" that matches the user's intent, YOU MUST USE THAT COMMAND.
+    12. NO DIRECTORY UPLOADS: You cannot use UPLOAD on a directory. For a folder, use `ls -F <path>` or `zip -r folder.zip <path> && echo "UPLOAD:$(realpath folder.zip)"`.
     {context_str}
     """
     
@@ -478,14 +481,40 @@ def process_instruction(instruction, media_path=None):
                 log(f"➡️ Running: {cmd}")
                 out = run_shell(cmd)
                 
-                # Check if the command output contains UPLOAD directive
-                if out.strip().upper().startswith("UPLOAD:"):
-                    log(f"📤 Upload detected from command output")
-                    return out.strip()
+                # Check if the command output contains UPLOAD directive (Scan all lines)
+                target_upload_path = None
+                for line in out.splitlines():
+                    if line.strip().upper().startswith("UPLOAD:"):
+                        target_upload_path = line.strip().split(":", 1)[1].strip()
+                        break
+                
+                if target_upload_path:
+                    log(f"📤 Upload detected in command output: {target_upload_path}")
+                    # Validate that the path is a file (not a directory)
+                    if os.path.isdir(target_upload_path):
+                        log(f"⚠️ UPLOAD failed: {target_upload_path} is a directory.")
+                        return f"❌ Cannot upload a directory: {target_upload_path}\nUse 'ls' to see contents or zip it first."
+                    if not os.path.isfile(target_upload_path):
+                        log(f"⚠️ UPLOAD failed: {target_upload_path} does not exist or is not a file.")
+                        # If the path looks like an error message, return the whole output
+                        if " " in target_upload_path and len(target_upload_path) > 50:
+                             return out.strip()
+                        return f"❌ File not found: {target_upload_path}\n(Full output was: {out.strip()})"
+                    
+                    # Return the UPLOAD directive for the bridge
+                    return f"UPLOAD: {target_upload_path}"
             
             full_output.append(f"> {cmd}\n{out}")
             
-        return "\n\n".join(full_output)
+        combined_result = "\n\n".join(full_output)
+        
+        # Prevent huge payloads that crash the bridge/WhatsApp
+        MAX_CHARS = 5000
+        if len(combined_result) > MAX_CHARS:
+            log(f"✂️ Truncating result (Length: {len(combined_result)})")
+            combined_result = combined_result[:MAX_CHARS] + f"\n\n... (Result truncated at {MAX_CHARS} characters) ..."
+            
+        return combined_result
     
     # 3. Fallback
     # 3. Fallback

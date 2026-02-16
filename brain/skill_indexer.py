@@ -62,6 +62,7 @@ class SkillIndexer:
                     # Extract metadata
                     name = skill_name
                     description = ""
+                    command = ""
                     
                     # Parse YAML frontmatter
                     for line in content.split('\n'):
@@ -70,15 +71,14 @@ class SkillIndexer:
                         if line.startswith('description:'):
                             description = line.replace('description:', '').strip()
                     
-                    # Extract command
-                    match = re.search(r'`((?:python3|bash) .agent/skills/([^`]+))`', content)
+                    # Extract command (support python3, bash, or direct shell commands like ls, find)
+                    match = re.search(r'`((?:python3|bash|ls|find|cat|head|realpath) [^`]+)`', content)
                     if match:
-                        full_cmd = match.group(1)
-                        cmd_parts = full_cmd.split(' ', 1)
-                        cmd_prefix = cmd_parts[0]
-                        rel_path = f".agent/skills/{match.group(2)}"
-                        abs_path = os.path.join(self.project_root, rel_path)
-                        command = f"{cmd_prefix} {abs_path}"
+                        command = match.group(1)
+                        # If it's a script in .agent/skills/, ensure it has absolute path
+                        if ".agent/skills/" in command:
+                            # Use regex to find the relative path and replace with absolute
+                            command = re.sub(r'\.?agent/skills/', os.path.join(self.project_root, ".agent/skills/"), command)
                     
                     if description and command:
                         text_to_embed = f"{name}: {description}"

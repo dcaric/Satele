@@ -11,8 +11,28 @@ BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 PYTHON_CMD="python3"
 NODE_CMD="node"
 OS_TYPE=$(uname -s)
-# Force Linux path for logs to avoid Windows paths leaking in Docker
-export LOG_FILE="/tmp/satele_dcaric.log"
+# Log file location
+export LOG_FILE="$BASE_DIR/satele.log"
+
+# Helper function to reliably kill processes
+ensure_killed() {
+    local pattern=$1
+    local name=$2
+    if pgrep -f "$pattern" > /dev/null; then
+        echo "⏳ Stopping old $name..."
+        pkill -f "$pattern"
+        # Wait up to 5 seconds
+        for i in {1..10}; do
+            if ! pgrep -f "$pattern" > /dev/null; then return 0; fi
+            sleep 0.5
+        done
+        # Force kill if still alive
+        if pgrep -f "$pattern" > /dev/null; then
+            echo "⚠️ Force killing $name..."
+            pkill -9 -f "$pattern"
+        fi
+    fi
+}
 
 # Helper Functions
 export REMOTE_BRIDGE_URL="http://localhost:8000"
@@ -103,39 +123,30 @@ function start() {
 
     # 1. Start FastAPI Server
     if [ -f "server/main.py" ]; then
-        if pgrep -f "Python server/main.py" > /dev/null; then
-            pkill -f "Python server/main.py"
-            sleep 0.5
-        fi
-        nohup "$PYTHON_CMD" server/main.py >> /tmp/satele_dcaric.log 2>&1 &
+        ensure_killed "Python server/main.py" "FastAPI Server"
+        nohup "$PYTHON_CMD" server/main.py >> "$LOG_FILE" 2>&1 &
         echo "✅ FastAPI Server Started"
     fi
 
     # 2. Start WhatsApp Bridge
-    if pgrep -f "node whatsapp_bridge.js" > /dev/null; then
-        pkill -f "node whatsapp_bridge.js"
-        sleep 0.5
-    fi
-    BOT_TRIGGER="$NAME" nohup node whatsapp_bridge.js >> /tmp/satele_dcaric.log 2>&1 &
+    ensure_killed "node whatsapp_bridge.js" "WhatsApp Bridge"
+    BOT_TRIGGER="$NAME" nohup node whatsapp_bridge.js >> "$LOG_FILE" 2>&1 &
     echo "✅ WhatsApp Bridge Started"
 
     # 3. Start AI Monitor
-    if pgrep -f "monitor.py" > /dev/null; then
-        pkill -f "monitor.py"
-        sleep 0.5
-    fi
-    nohup "$PYTHON_CMD" "$BASE_DIR/brain/monitor.py" >> /tmp/satele_dcaric.log 2>&1 &
+    ensure_killed "monitor.py" "AI Monitor"
+    nohup "$PYTHON_CMD" "$BASE_DIR/brain/monitor.py" >> "$LOG_FILE" 2>&1 &
     echo "✅ AI Monitor (Brain) Started"
     
     echo "✅ Satele is now active in the background."
-    echo "📄 Check logs with: tail -f /tmp/satele_dcaric.log"
+    echo "📄 Check logs with: tail -f satele.log"
 }
 
 function stop() {
     echo "🛑 Stopping Satele Services..."
-    pkill -f "Python server/main.py"
-    pkill -f "node whatsapp_bridge.js"
-    pkill -f "monitor.py"
+    ensure_killed "Python server/main.py" "FastAPI Server"
+    ensure_killed "node whatsapp_bridge.js" "WhatsApp Bridge"
+    ensure_killed "monitor.py" "AI Monitor"
     echo "✅ All Satele processes terminated."
 }
 
@@ -569,9 +580,9 @@ case "$1" in
         stop
         ;;
     kill)
-        pkill -f "Python server/main.py"
-        pkill -f "node whatsapp_bridge.js"
-        pkill -f "monitor.py"
+        ensure_killed "Python server/main.py" "FastAPI Server"
+        ensure_killed "node whatsapp_bridge.js" "WhatsApp Bridge"
+        ensure_killed "monitor.py" "AI Monitor"
         echo "💀 Force killed all processes."
         ;;
     ollama)

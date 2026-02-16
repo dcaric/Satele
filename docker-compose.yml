@@ -40,4 +40,4 @@ services:
     # 📝 Command
     # By default, runs ./satele start which launches both Node & Python
     # But for debugging, we can override to keep it alive
-    command: [ "/bin/bash", "-c", "./satele start && tail -f /tmp/satele_dcaric.log" ]
+    command: [ "/bin/bash", "-c", "./satele start && tail -f satele.log" ]

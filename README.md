@@ -263,6 +263,29 @@ To allow other numbers (e.g., your secondary phone):
 - Ensure `ffmpeg` is installed for voice note processing (`sudo apt install ffmpeg`).
 ---
 
+---
+
+## 📡 Network Stability & Troubleshooting
+
+Satele is designed to be lightweight, but improper configuration (like running multiple instances with the same WhatsApp account) can cause network instability.
+
+### ⚠️ Common Issue: The "Conflict Loop"
+If you see the following in your logs:
+```text
+❌ Connection closed due to Error: Stream Errored (conflict)
+```
+This means **two or more instances** of Satele are trying to use the same WhatsApp account simultaneously. This creates a "ping-pong" effect where they constantly kick each other off, flooding your network with reconnection attempts.
+
+**How to Fix:**
+1.  **Stop all instances:** Run `satele kill` on all machines.
+2.  **Pull latest version:** Run `git pull` to get the robust process manager fix.
+3.  **Start only one:** `satele start`.
+
+### 🛡️ Robust Process Management
+The latest version of the `satele` CLI includes `ensure_killed` logic. This ensures that any old "stray" processes are forcefully terminated before a new session starts, preventing zombie instances from hogging your network.
+
+---
+
 ## 🤖 For AI Developers: Agent Integration (Skill)
 
 Satele isn't just a chatbot; it's a **Skill** you can install into other AI Agents (like Antigravity, OpenInterpreter, or Custom LLMs). This allows your coding agents to **send WhatsApp messages to you** when they finish a task or need input.

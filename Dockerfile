@@ -28,7 +28,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY . .
 
 # Ensure satele script is executable and has correct line endings
-RUN chmod +x satele && dos2unix satele
+RUN chmod +x satele && \
+    touch satele.config satele_cfg.env && \
+    dos2unix satele satele.config satele_cfg.env
 
 # Add current directory to PATH so 'satele' command works globally
 ENV PATH="/app:${PATH}"

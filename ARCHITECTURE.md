@@ -145,6 +145,13 @@ brain_memory.recall(query, n_results=3)
     └── (implementation files)
 ```
 
+**Scalable Semantic Search:**
+To support hundreds of skills without bloating the AI prompt, Satele uses a **Semantic Skill Indexer**:
+- **Indexing:** At startup, `skill_indexer.py` scans all `SKILL.md` files and generates vector embeddings using `sentence-transformers` (specifically the `all-MiniLM-L6-v2` model).
+- **Storage:** Embeddings and metadata are cached in `brain/.skill_index_v2.json`.
+- **Retrieval:** When a user sends a message, Satele performs a cosine similarity search between the user's instruction and the indexed skills.
+- **Prompt Injection:** Only the top 5 most relevant skills are injected into the AI's prompt, ensuring high performance and accuracy even with a massive skill library.
+
 See [Skills System](#skills-system) section for details.
 
 ---
@@ -241,6 +248,9 @@ pkill -f monitor.py
 ```
 
 The skill is now available! The AI will automatically discover it.
+
+**How Skills Are Targeted (Semantic Search):**
+Unlike simple keyword matching, Satele uses **Semantic Search** to find the right skill. If you have a skill for "Network Diagnostics" and a user says "My internet is slow", the semantic search will correctly identify that "Network Diagnostics" is the most relevant tool and inject it into the AI's context.
 
 ### Skill Output Conventions
 

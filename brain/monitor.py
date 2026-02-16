@@ -64,8 +64,30 @@ def run_shell(cmd):
     except Exception as e:
         return f"Execution Error: {str(e)}"
 
-def get_skills_context():
-    """Scans .agent/skills for SKILL.md files to inject into AI prompt."""
+def get_skills_context(instruction=None):
+    """
+    Get relevant skills using semantic search.
+    If instruction is provided, returns top 5 most relevant skills.
+    Otherwise, returns all skills (for backward compatibility).
+    """
+    from skill_indexer import get_skill_indexer
+    
+    try:
+        indexer = get_skill_indexer(PROJECT_ROOT)
+        
+        if instruction:
+            # Semantic search for relevant skills
+            return indexer.search_skills(instruction, top_k=5)
+        else:
+            # Return all skills (fallback)
+            return indexer.get_all_skills()
+    except Exception as e:
+        log(f"⚠️ Skill indexer error: {e}")
+        # Fallback to old method if indexer fails
+        return get_skills_context_legacy()
+
+def get_skills_context_legacy():
+    """Legacy skill loading (fallback if indexer fails)"""
     skills_dir = os.path.join(PROJECT_ROOT, ".agent", "skills")
 
     if not os.path.exists(skills_dir):
@@ -161,7 +183,8 @@ def ai_interpret(instruction, media_path=None):
     - Downloads: {home_dir}/Downloads"""
         example_dest = f"{home_dir}/Downloads"
     
-    skills_str = get_skills_context()
+    # Get relevant skills using semantic search
+    skills_str = get_skills_context(instruction)
 
     prompt_text = f"""
     You are an AI bridge. You translate natural language to safe bash commands.

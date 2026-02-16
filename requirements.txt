@@ -8,3 +8,4 @@ google-genai
 sentence-transformers
 pydantic
 speedtest-cli
+Pillow

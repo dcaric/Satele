@@ -8,10 +8,13 @@ def run_speedtest():
     
     print("🚀 Starting speed test...")
     
-    # Find speedtest-cli in venv
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(os.path.dirname(os.path.dirname(script_dir)))
-    speedtest_cmd = os.path.join(project_root, "venv", "bin", "speedtest-cli")
+    # Find speedtest-cli
+    import shutil
+    speedtest_cmd = shutil.which("speedtest-cli")
+    
+    if not speedtest_cmd:
+        print("Error: speedtest-cli not found in PATH")
+        return
     
     # Run speedtest-cli
     try:
@@ -65,11 +68,27 @@ def run_speedtest():
             draw = ImageDraw.Draw(img)
             
             # Try to use a nice font, fallback to default
-            try:
-                font_large = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 40)
-                font_medium = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 32)
-                font_small = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 20)
-            except:
+            # Try to use a nice font, fallback to generic paths, then default
+            font_paths = [
+                "/System/Library/Fonts/Helvetica.ttc",  # macOS
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # Linux (Debian/Ubuntu)
+                "/usr/share/fonts/TTF/DejaVuSans.ttf",  # Other Linux
+                "C:\\Windows\\Fonts\\arial.ttf"  # Windows
+            ]
+            
+            font_large = font_medium = font_small = None
+            
+            for path in font_paths:
+                if os.path.exists(path):
+                    try:
+                        font_large = ImageFont.truetype(path, 40)
+                        font_medium = ImageFont.truetype(path, 32)
+                        font_small = ImageFont.truetype(path, 20)
+                        break
+                    except:
+                        continue
+            
+            if not font_large:
                 font_large = ImageFont.load_default()
                 font_medium = ImageFont.load_default()
                 font_small = ImageFont.load_default()

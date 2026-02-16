@@ -365,11 +365,11 @@ If you run this on a home server (like a Mac Mini or Raspberry Pi):
 
 #### 5. Verified "Agentic" Workflow
 This is the most advanced use case. Satele is not just a bot; she is an **output channel for other AIs**.
-*   You are coding with **Antigravity** (me).
-*   You tell me: *"Run a long test suite. If it fails, ping me on WhatsApp via Satele."*
+*   You are coding with **Antigravity**.
+*   You tell me: *"Run a long test suite. If it fails, ping Antigravity on WhatsApp via Satele."*
 *   I can use the `remote_bridge` skill to send you that alert. Satele becomes the "voice" of your entire digital workforce.
 
-### What makes her special?
+### What makes Satele special?
 Unlike a standard SSH client (which is painful on mobile):
 *   **Context Aware:** She knows you are in Docker but want Windows files (`/host_home`).
 *   **Persistent:** She remembers you were in `~/Working/ml` yesterday.

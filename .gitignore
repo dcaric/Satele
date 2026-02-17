@@ -39,3 +39,4 @@ satele.config
 satele.config.tmp
 
 *.zip
+package-lock.json

@@ -7,7 +7,14 @@
 #   satele name     - Set the trigger word (e.g. satele name mark)
 #   satele status   - Check if services are running
 
-BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Resolve the directory where the script is actually located (handle symlinks)
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+    DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+BASE_DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
 PYTHON_CMD="python3"
 NODE_CMD="node"
 OS_TYPE=$(uname -s)

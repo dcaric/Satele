@@ -373,8 +373,8 @@ def ai_reason(instruction, tool_output):
         if provider == "ollama":
             import requests
             model_name = os.getenv("OLLAMA_MODEL", "gemma:2b")
-            # Specific extraction prompt for smaller local models
-            sys_msg = "You are a data extraction assistant. Your mission is to provide a specific, direct answer to the user's question using ONLY the provided DATA."
+            # Extremely strict extraction prompt for local models
+            sys_msg = "You are a DATA EXTRACTION BOT. Answer only the USER QUESTION using the DATA. Do NOT summarize the entire data. Do NOT provide market analysis. If search for a specific value (equity, total capital, balance), find that exact number and return it in one sentence."
             payload = {
                 "model": model_name,
                 "prompt": f"SYSTEM: {sys_msg}\nUSER QUESTION: {instruction}\n\nDATA:\n{tool_output}\n\nDIRECT ANSWER:",
@@ -385,7 +385,7 @@ def ai_reason(instruction, tool_output):
         else:
             if not GOOGLE_API_KEY:
                 return f"⚠️ Analysis requires GOOGLE_API_KEY. Raw output:\n{tool_output}"
-            response = model.generate_content(f"Use the following DATA to directly answer this specific QUESTION: '{instruction}'. If a specific number or detail is requested, provide it first.\n\nDATA:\n{tool_output}")
+            response = model.generate_content(f"CRITICAL: The user wants a specific answer to: '{instruction}'. Do NOT provide a general summary of the text. Find the exact detail or number requested in the DATA below and provide it directly.\n\nDATA:\n{tool_output}")
             return response.text.strip()
     except Exception as e:
         log(f"Reasoning Error: {e}")
@@ -492,13 +492,6 @@ def process_instruction(instruction, media_path=None):
                 combined_result = ai_reason(instruction, combined_result)
 
         # Prevent huge payloads
-        MAX_CHARS = 5000
-        if len(combined_result) > MAX_CHARS:
-            combined_result = combined_result[:MAX_CHARS] + f"\n\n... (Result truncated at {MAX_CHARS} characters) ..."
-            
-        return combined_result
-        
-        # Prevent huge payloads that crash the bridge/WhatsApp
         MAX_CHARS = 5000
         if len(combined_result) > MAX_CHARS:
             log(f"✂️ Truncating result (Length: {len(combined_result)})")

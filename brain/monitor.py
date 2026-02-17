@@ -214,7 +214,7 @@ def ai_interpret(instruction, media_path=None):
        - If asked for "who am I", use `whoami`.
     6. SKILLS TAKE PRECEDENCE: If a command is listed in "AVAILABLE SKILLS" that matches the user's intent, YOU MUST USE THAT EXACT COMMAND WITH ALL PROVIDED ARGUMENTS/PATHS.
     7. NO HALLUCINATION: If the user asks for Gmail and the command provided is `python3 .../gmail_tool.py`, DO NOT output `gmail_tool.py` or `Gmail Search`.
-    8. RESULTS AS COMMANDS: If the user asks to "Summarize" or "Analyze", use the command that fetches the FULL content (e.g., `python3 .../gmail_tool.py fetch_full ...`).
+    8. RESULTS AS COMMANDS: If the user asks to "Summarize", "Analyze", or asks for **specific details/info/numbers** from a source (like an email), use the command that fetches the FULL content (e.g., `python3 .../gmail_tool.py fetch_full ...`).
     9. NO PLACEHOLDERS: NEVER use generic or placeholder emails like 'your-email@gmail.com' in Gmail commands. If the user didn't specify a sender, OMIT the "sender" field entirely.
     10. PRECISION: Respect numerical quantities. If the user asks for "the last one", use `limit: 1`. If "last 3", use `limit: 3`. Do NOT return more data than requested.
     
@@ -373,19 +373,19 @@ def ai_reason(instruction, tool_output):
         if provider == "ollama":
             import requests
             model_name = os.getenv("OLLAMA_MODEL", "gemma:2b")
-            # Minimal reasoning prompt for smaller local models
-            sys_msg = "You are a concise analyst. Summarize the provided data to answer the user request."
+            # Specific extraction prompt for smaller local models
+            sys_msg = "You are a data extraction assistant. Your mission is to provide a specific, direct answer to the user's question using ONLY the provided DATA."
             payload = {
                 "model": model_name,
-                "prompt": f"{sys_msg}\n\n{prompt}",
+                "prompt": f"SYSTEM: {sys_msg}\nUSER QUESTION: {instruction}\n\nDATA:\n{tool_output}\n\nDIRECT ANSWER:",
                 "stream": False
             }
             resp = requests.post("http://localhost:11434/api/generate", json=payload, timeout=60)
             return resp.json().get("response", "Error: No response from Ollama").strip()
         else:
             if not GOOGLE_API_KEY:
-                return f"⚠️ Summary requires GOOGLE_API_KEY. Raw output:\n{tool_output}"
-            response = model.generate_content(f"Summarize/Analyze to answer: {instruction}\n\nDATA:\n{tool_output}")
+                return f"⚠️ Analysis requires GOOGLE_API_KEY. Raw output:\n{tool_output}"
+            response = model.generate_content(f"Use the following DATA to directly answer this specific QUESTION: '{instruction}'. If a specific number or detail is requested, provide it first.\n\nDATA:\n{tool_output}")
             return response.text.strip()
     except Exception as e:
         log(f"Reasoning Error: {e}")
@@ -475,12 +475,20 @@ def process_instruction(instruction, media_path=None):
             
         combined_result = "\n".join(full_output)
         
-        # 🧠 COGNITIVE PASS: If the user asked for summary/analysis AND we have data
-        analysis_keywords = ["summarize", "analyze", "explain", "feedback", "what", "check", "report"]
-        if any(k in instruction.lower() for k in analysis_keywords) and len(combined_result) > 20:
+        # 🧠 COGNITIVE PASS: If the user asked for summary/analysis/specific detail AND we have data
+        # Use word boundaries for keywords to avoid accidental triggers like "Report" in a subject
+        import re
+        analysis_keywords = [r"\bsummarize\b", r"\banalyze\b", r"\bextract\b", r"\bwhat\b", r"\bhow\b", r"\bfeedback\b", r"\bstatus\b", r"\bis\b"]
+        should_reason = any(re.search(k, instruction.lower()) for k in analysis_keywords)
+        
+        # Also trigger if the user asks for a specific extraction even without keywords
+        if not should_reason and any(word in instruction.lower() for word in ["equity", "profit", "balance", "total"]):
+            should_reason = True
+
+        if should_reason and len(combined_result) > 20:
             # Check for data markers (case-insensitive) or substantial text
             res_lower = combined_result.lower()
-            if "email id:" in res_lower or "subject:" in res_lower or "from:" in res_lower or len(combined_result) > 800:
+            if "email id:" in res_lower or "subject:" in res_lower or "from:" in res_lower or len(combined_result) > 600:
                 combined_result = ai_reason(instruction, combined_result)
 
         # Prevent huge payloads

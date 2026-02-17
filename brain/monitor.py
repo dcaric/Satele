@@ -1,5 +1,6 @@
 import os
 import time
+import datetime
 import subprocess
 import requests
 import json
@@ -27,16 +28,18 @@ from dotenv import load_dotenv
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Load environment variables from consolidated satele.config
-env_path = os.path.join(PROJECT_ROOT, "satele.config")
+# Prioritize local brain copy to bypass root permission issues
+env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "satele.config")
 if not os.path.exists(env_path):
-    # Search root satele_cfg.env as fallback
-    env_path = os.path.join(PROJECT_ROOT, "satele_cfg.env")
-    if not os.path.exists(env_path):
-        # Local brain fallback
-        env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config_v2.env")
+    env_path = os.path.join(PROJECT_ROOT, "satele.config")
 
-load_dotenv(env_path)
-log(f"📝 Config loaded from: {env_path}")
+if os.path.exists(env_path):
+    load_dotenv(env_path)
+    log(f"📝 Config loaded from: {env_path}")
+else:
+    log(f"⚠️ Primary config not found or inaccessible: {env_path}")
+    # Fallback to current environment if config is missing
+    load_dotenv() 
 
 try:
     from memory import Memory
@@ -262,10 +265,11 @@ def ai_interpret(instruction, media_path=None):
                 return None
 
         except Exception as e:
-            log(f"Ollama Connection Error: {e}")
-            return None
+            log(f"Ollama Connection Error: {e}. Falling back to Cloud Gemini...")
+            # Fallback to Gemini handled below
+            provider = "gemini" 
     
-    else: # Default Gemini
+    if provider == "gemini" or not text_response: # Fallback or direct Gemini
         if not model:
             # simple fallback if gemini not configured
             if "disk" in instruction.lower(): return ["df -h"]
@@ -540,20 +544,18 @@ def monitor_loop():
 
     while True:
         try:
-            # log("🔍 Polling for tasks...")
+            # now = datetime.datetime.now().strftime("%H:%M:%S")
+            # log(f"[{now}] 🔍 Checking for tasks...")
             response = requests.get(
                 f"{BASE_URL}/get-task", 
                 headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
                 timeout=5
             )
             
+            task_processed = False
             if response.status_code == 200:
                 task = response.json()
-                if not task:
-                    # No tasks in queue - respect the poll interval
-                    time.sleep(POLL_INTERVAL)
-                    pass
-                else:
+                if task:
                     task_id = task.get('id')
                     instruction = task.get('instruction')
                     media_path = task.get('media_path')
@@ -564,17 +566,23 @@ def monitor_loop():
                         # Satele Logic: If the user says "use gravity", we let the Antigravity Agent handle it.
                         if instruction and "use gravity" in instruction.lower():
                             log(f"🧠 Handoff: '{instruction}' -> Letting Antigravity Agent handle this.")
-                            continue
+                        else:
+                            result = process_instruction(instruction, media_path)
+                            
+                            requests.post(
+                                f"{BASE_URL}/report-result",
+                                json={"id": task_id, "output": result},
+                                headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
+                                timeout=5
+                            )
+                            log(f"✅ Result sent for {task_id}")
+                        task_processed = True
+            else:
+                log(f"⚠️ Server returned status {response.status_code}.")
 
-                        result = process_instruction(instruction, media_path)
-                        
-                        requests.post(
-                            f"{BASE_URL}/report-result",
-                            json={"id": task_id, "output": result},
-                            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
-                            timeout=5
-                        )
-                        log(f"✅ Result sent for {task_id}")
+            if not task_processed:
+                time.sleep(POLL_INTERVAL)
+
                 
         except Exception as e:
             log(f"❌ Monitor Loop Error: {e}")

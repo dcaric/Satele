@@ -71,12 +71,17 @@ function update_env() {
 function get_env_var() {
     local KEY=$1
     local DEFAULT=$2
+    local VAL=""
+    
     if [ -f "$BASE_DIR/satele.config" ]; then
-        local VAL=$(grep "^$KEY=" "$BASE_DIR/satele.config" | cut -d '=' -f2)
-        if [ -z "$VAL" ]; then echo "$DEFAULT"; else echo "$VAL"; fi
-    else
-        echo "$DEFAULT"
+        VAL=$(grep "^$KEY=" "$BASE_DIR/satele.config" 2>/dev/null | cut -d '=' -f2)
     fi
+    
+    if [ -z "$VAL" ] && [ -f "$BASE_DIR/brain/satele.config" ]; then
+        VAL=$(grep "^$KEY=" "$BASE_DIR/brain/satele.config" 2>/dev/null | cut -d '=' -f2)
+    fi
+
+    if [ -z "$VAL" ]; then echo "$DEFAULT"; else echo "$VAL"; fi
 }
 
 function start() {
@@ -107,7 +112,11 @@ function start() {
 
     # Source variables
     set -a
-    source "$ENV_FILE"
+    if ! source "$ENV_FILE" 2>/dev/null; then
+        if [ -f "$BASE_DIR/brain/satele.config" ]; then
+            source "$BASE_DIR/brain/satele.config"
+        fi
+    fi
     set +a
     
     NAME=${BOT_TRIGGER:-"satele"}
@@ -132,6 +141,24 @@ function start() {
 
     # 3. Start AI Monitor
     ensure_killed "monitor.py" "AI Monitor"
+    
+    # Auto-start Ollama if configured
+    local PROVIDER=$(get_env_var "AI_PROVIDER" "gemini")
+    if [ "$PROVIDER" = "ollama" ]; then
+        if command -v ollama &> /dev/null; then
+            if ! curl -s http://localhost:11434/api/tags &>/dev/null; then
+                echo "🦙 Starting local Ollama service..."
+                if [[ "$OSTYPE" == "darwin"* ]]; then
+                    open -a Ollama
+                else
+                    ollama serve &>/dev/null &
+                fi
+                # Wait a bit for it to spin up
+                sleep 5
+            fi
+        fi
+    fi
+
     nohup "$PYTHON_CMD" "$BASE_DIR/brain/monitor.py" >> "$LOG_FILE" 2>&1 &
     echo "✅ AI Monitor (Brain) Started"
     
@@ -168,18 +195,20 @@ function status() {
     if pgrep -f "monitor.py" > /dev/null; then echo "🔹 AI Monitor: RUNNING"; else echo "🔸 AI Monitor: STOPPED"; fi
 
     # Get AI Provider and Model
-    local AI_PROVIDER=$(grep "^AI_PROVIDER=" "$BASE_DIR/satele.config" | cut -d '=' -f2)
-    if [ -z "$AI_PROVIDER" ]; then AI_PROVIDER="gemini"; fi
+    local AI_PROVIDER=$(get_env_var "AI_PROVIDER" "gemini")
+    local GEMINI_MODEL=$(get_env_var "GEMINI_MODEL" "gemini-2.0-flash")
+    local OLLAMA_MODEL=$(get_env_var "OLLAMA_MODEL" "gemma:2b")
     
-    local GEMINI_MODEL=$(grep "^GEMINI_MODEL=" "$BASE_DIR/satele.config" | cut -d '=' -f2)
-    if [ -z "$GEMINI_MODEL" ]; then GEMINI_MODEL="gemini-2.0-flash"; fi
-    
-    local OLLAMA_MODEL=$(grep "^OLLAMA_MODEL=" "$BASE_DIR/satele.config" | cut -d '=' -f2)
-    if [ -z "$OLLAMA_MODEL" ]; then OLLAMA_MODEL="gemma:2b"; fi
+    local OLLAMA_STATUS=""
+    if curl -s http://localhost:11434/api/tags &>/dev/null; then
+        OLLAMA_STATUS=" (ONLINE)"
+    else
+        OLLAMA_STATUS=" (OFFLINE)"
+    fi
 
     local BRAIN_STATUS=""
     if [ "$AI_PROVIDER" = "ollama" ]; then
-        BRAIN_STATUS="🧠 Brain: Local (Ollama: $OLLAMA_MODEL)"
+        BRAIN_STATUS="🧠 Brain: Local$OLLAMA_STATUS (Ollama: $OLLAMA_MODEL)"
     else
         # Cloud / Gemini
         local TOKEN_INFO=""

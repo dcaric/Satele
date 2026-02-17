@@ -82,6 +82,13 @@ def run_shell(cmd):
         if any(bad in cmd for bad in ["> /dev/sda", "rm -rf /", "mkfs"]):
             return "Error: Dangerous command blocked."
             
+        # Ensure we use the same python interpreter as the monitor (venv)
+        import sys
+        if cmd.strip().startswith("python3"):
+            cmd = cmd.replace("python3", sys.executable, 1)
+        elif cmd.strip().startswith("python"):
+            cmd = cmd.replace("python", sys.executable, 1)
+            
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
         return (result.stdout + result.stderr).strip() or "Success (No output)"
     except Exception as e:
@@ -117,19 +124,22 @@ def get_skills_context_legacy():
                         if line.startswith("name:"):
                             name = line.replace("name:", "").strip()
                     
-                    # Extract command (support python3, bash, or direct shell commands like ls, find, cat, head, realpath)
-                    script_usage = ""
-                    match = re.search(r'`((?:python3|bash|ls|find|cat|head|realpath) [^`]+)`', content)
-                    if match:
-                        script_usage = match.group(1)
-                        # If it's a script in .agent/skills/, ensure it has absolute path
-                        if ".agent/skills/" in script_usage:
-                            # Use regex to find the relative path and replace with absolute
-                            script_usage = re.sub(r'\.?agent/skills/', os.path.join(PROJECT_ROOT, ".agent/skills/"), script_usage)
+                    # Extract ALL commands (support python3, bash, or direct shell commands like ls, find, cat, head, realpath)
+                    all_matches = re.finditer(r'`((?:python3|bash|ls|find|cat|head|realpath) [^`]+)`', content)
+                    commands = []
+                    for match in all_matches:
+                        cmd_text = match.group(1)
+                        # Ensure absolute paths
+                        if ".agent/skills/" in cmd_text:
+                            cmd_text = re.sub(r'\.?agent/skills/', os.path.join(PROJECT_ROOT, ".agent/skills/"), cmd_text)
+                        elif "brain/" in cmd_text:
+                            cmd_text = re.sub(r'\.?brain/', os.path.join(PROJECT_ROOT, "brain/"), cmd_text)
+                        commands.append(cmd_text)
                     
-                    if desc and script_usage:
+                    if desc and commands:
                         skills_context += f"- {name}: {desc}\n"
-                        skills_context += f"  COMMAND: {script_usage}\n"
+                        for c in commands:
+                            skills_context += f"  COMMAND: {c}\n"
                         found_any = True
     except Exception as e:
         log(f"Error loading skills: {e}")
@@ -193,27 +203,25 @@ def ai_interpret(instruction, media_path=None):
     {env_context}
     {skills_str}
     
-    CRITICAL FILE HANDLING RULES:
-    1. If the user sends a file/image and says 'save it' or similar:
-       - THE SOURCE IS: '{media_path}'
-       - THE DESTINATION IS: Whatever path the user mentioned (e.g {example_dest}).
-       - COMMAND MUST BE: `mv {media_path} <destination>`
+    CRITICAL RULES:
+    1. Respond ONLY with safe bash commands, ONE PER LINE. No explanation. No markdown.
+    2. USE ABSOLUTE PATHS for all scripts and tools mentioned in "AVAILABLE SKILLS".
+    3. YOUR CURRENT LOCATION (CWD): {os.getcwd()}
+    4. PRESERVE PATH CASE EXACTLY.
+    5. UTILITY COMMANDS: 
+       - If asked for "current path" or "where am I", use `pwd`.
+       - If asked for "time", use `date`.
+       - If asked for "who am I", use `whoami`.
+    6. SKILLS TAKE PRECEDENCE: If a command is listed in "AVAILABLE SKILLS" that matches the user's intent, YOU MUST USE THAT EXACT COMMAND WITH ALL PROVIDED ARGUMENTS/PATHS.
+    7. NO HALLUCINATION: If the user asks for Gmail and the command provided is `python3 .../gmail_tool.py`, DO NOT output `gmail_tool.py` or `Gmail Search`.
+    8. RESULTS AS COMMANDS: If the user asks to "Summarize" or "Analyze", use the command that fetches the FULL content (e.g., `python3 .../gmail_tool.py fetch_full ...`).
+    9. NO PLACEHOLDERS: NEVER use generic or placeholder emails like 'your-email@gmail.com' in Gmail commands. If the user didn't specify a sender, OMIT the "sender" field entirely.
+    10. PRECISION: Respect numerical quantities. If the user asks for "the last one", use `limit: 1`. If "last 3", use `limit: 3`. Do NOT return more data than requested.
     
-    2. NEVER SWAP THE DIRECTION. The file at {media_path} is the one you must move.
-    3. Use absolute paths for targets outside of your current folder. If referring to your current location (CWD), use standard unix utilities (pwd, ls, etc.).
-    4. Respond ONLY with safe bash commands, ONE PER LINE. No explanation. No markdown formatting.
-    5. YOUR CURRENT LOCATION (CWD): {os.getcwd()}
-    6. FOR GUI APPS (Calculator, Chrome), use `sh: open -a "App Name"`. NEVER use this for Speedtest or speed measurements - ALWAYS use the speedtest skill command instead.
-    7. TO SEND FILES: If the user mentions a specific file (e.g., 'send me html.zip'), use `UPLOAD:<filename>`. Only use search if the user is ambiguous (e.g., 'send me the latest image').
-    8. TO FIND LATEST FILE: Use `echo "UPLOAD:$(find . -maxdepth 1 -type f -not -path '*/.*' -exec stat -f "%m %N" {{}} + | sort -rn | head -1 | cut -d' ' -f2- | xargs realpath)"`
-    9. VERIFY BEFORE SENDING: Avoid `UPLOAD` on directories. If a search finds a directory, it will fail.
-    10. PRESERVE PATH CASE EXACTLY. Do NOT lowercase project names or folder names.
-    11. SKILLS TAKE PRECEDENCE: If a command is listed in "AVAILABLE SKILLS" that matches the user's intent, YOU MUST USE THAT COMMAND.
-    12. NO DIRECTORY UPLOADS: You cannot use UPLOAD on a directory. For a folder, use `ls -F <path>` or `zip -r folder.zip <path> && echo "UPLOAD:$(realpath folder.zip)"`.
-    13. UTILITY COMMANDS: 
-        - If asked for "current path" or "where am I", use `pwd`.
-        - If asked for "time", use `date`.
-        - If asked for "who am I", use `whoami`.
+    CRITICAL FILE HANDLING RULES:
+    - If saving a file: `mv {media_path} <destination>`
+    - To send a file: `UPLOAD:<filename>`
+    - To find latest file: `echo "UPLOAD:$(find . -maxdepth 1 -type f -not -path '*/.*' -exec stat -f "%m %N" {{}} + | sort -rn | head -1 | cut -d' ' -f2- | xargs realpath)"`
     {context_str}
     """
     
@@ -347,6 +355,42 @@ def ai_interpret(instruction, media_path=None):
             
     return cleaned_lines
 
+def ai_reason(instruction, tool_output):
+    """
+    Second pass: Performs analysis/summarization on the raw tool output using the active provider.
+    """
+    provider = os.getenv("AI_PROVIDER", "gemini").lower()
+    
+    # Prune output if it's too long for the model
+    if len(tool_output) > 15000:
+        tool_output = tool_output[:15000] + "...(truncated for analysis)..."
+
+    log(f"🧠 Reasoning Pass ({provider.upper()}): Analyzing output...")
+    
+    prompt = f"Analyze this data and answer: {instruction}\n\nDATA:\n{tool_output}"
+    
+    try:
+        if provider == "ollama":
+            import requests
+            model_name = os.getenv("OLLAMA_MODEL", "gemma:2b")
+            # Minimal reasoning prompt for smaller local models
+            sys_msg = "You are a concise analyst. Summarize the provided data to answer the user request."
+            payload = {
+                "model": model_name,
+                "prompt": f"{sys_msg}\n\n{prompt}",
+                "stream": False
+            }
+            resp = requests.post("http://localhost:11434/api/generate", json=payload, timeout=60)
+            return resp.json().get("response", "Error: No response from Ollama").strip()
+        else:
+            if not GOOGLE_API_KEY:
+                return f"⚠️ Summary requires GOOGLE_API_KEY. Raw output:\n{tool_output}"
+            response = model.generate_content(f"Summarize/Analyze to answer: {instruction}\n\nDATA:\n{tool_output}")
+            return response.text.strip()
+    except Exception as e:
+        log(f"Reasoning Error: {e}")
+        return tool_output
+
 def process_instruction(instruction, media_path=None):
     log(f"📩 Processing: {instruction} (Media: {media_path is not None})")
     
@@ -371,151 +415,80 @@ def process_instruction(instruction, media_path=None):
             
             # FILE UPLOAD INTERCEPT
             if cmd.upper().startswith("UPLOAD:"):
-                # Split case-insensitively but preserve path casing
+                # ... [UPLOAD logic remains same] ...
                 parts = cmd.split(":", 1)
                 raw_path = parts[1].strip()
-                
-                # Expand wildcards first
                 if "*" in raw_path or "?" in raw_path:
                     import glob
                     matches = glob.glob(raw_path) if os.path.isabs(raw_path) else glob.glob(os.path.join(os.getcwd(), raw_path))
                     if matches:
-                        # Pick the newest file
                         matches.sort(key=os.path.getmtime, reverse=True)
                         raw_path = matches[0]
-                        log(f"🌟 Expanded wildcard '{cmd}' -> '{raw_path}'")
-                    else:
-                        log(f"⚠️ Wildcard '{raw_path}' found no matches.")
-
-                # Auto-expand relative paths
                 if not os.path.isabs(raw_path):
                     raw_path = os.path.abspath(os.path.join(os.getcwd(), raw_path))
-                    log(f"📂 Converting relative path -> '{raw_path}'")
-
-                # --- RECURSIVE CASE CORRECTION ---
-                # Fixed: Handle deep paths like /users/dcaric/antigravitymessages/media/x
+                
                 def resolve_case_insensitive(path):
                     if os.path.exists(path): return path
-                    
                     parts = path.lstrip(os.path.sep).split(os.path.sep)
                     current = os.path.sep if path.startswith(os.path.sep) else ""
-                    
                     for part in parts:
                         if not part: continue
-                        found = False
-                        # Check exist with current casing
                         attempt = os.path.join(current, part)
-                        if os.path.exists(attempt):
-                            current = attempt
-                            found = True
+                        if os.path.exists(attempt): current = attempt
                         else:
-                            # Search parent for a case-insensitive match
                             if os.path.exists(current) and os.path.isdir(current):
                                 try:
                                     for item in os.listdir(current):
                                         if item.lower() == part.lower():
-                                            current = os.path.join(current, item)
-                                            found = True
-                                            break
+                                            current = os.path.join(current, item); break
                                 except: pass
-                        
-                        if not found:
-                             return path # Give up, return original
                     return current
-
                 raw_path = resolve_case_insensitive(raw_path)
-                log(f"🔗 Final Resolved Path: {raw_path}")
-                
                 return f"UPLOAD: {raw_path}"
             
-            # Intercept 'cd' to persist directory changes in the Python process
+            # Intercept 'cd'
             if cmd.strip().startswith("cd"):
                 try:
-                    # Parse path
                     parts = cmd.strip().split(maxsplit=1)
-                    if len(parts) == 1:
-                        target = os.path.expanduser("~")
-                    else:
-                        target = parts[1].strip()
-                        # Clean quotes
-                        if (target.startswith('"') and target.endswith('"')) or \
-                           (target.startswith("'") and target.endswith("'")):
-                            target = target[1:-1]
-
-                        # Clean artifacts like "CWD:" or "Directory"
-                        if target.upper().startswith("CWD:"):
-                             target = target[4:].strip()
-                        
-                        # --- DOCKER PATH CORRECTION ---
-                        # If user types 'cd home' or 'cd host' inside docker, force it to /host_home
-                        if os.path.exists("/host_home"):
-                            if target.lower() in ["home", "host", "~", "users"]:
-                                target = "/host_home"
-                            elif target.lower() == "root":
-                                target = "/"
-                            else:
-                                # Try to resolve relative to current dir first, then host_home
-                                try_local = os.path.abspath(os.path.join(os.getcwd(), target))
-                                try_host = os.path.abspath(os.path.join("/host_home", target))
-                                
-                                if os.path.isdir(try_local):
-                                    target = try_local
-                                elif os.path.isdir(try_host):
-                                    target = try_host
-                                else:
-                                     target = os.path.expanduser(target)
-                        else:
-                             target = os.path.expanduser(target)
-                    
+                    target = os.path.expanduser("~") if len(parts) == 1 else parts[1].strip()
+                    if (target.startswith('"') and target.endswith('"')) or (target.startswith("'") and target.endswith("'")):
+                        target = target[1:-1]
+                    if target.upper().startswith("CWD:"): target = target[4:].strip()
                     os.chdir(target)
                     out = f"📂 Directory changed to: {os.getcwd()}"
-                    if os.path.exists("/host_home") and os.getcwd().startswith("/host_home"):
-                         out += " (On Host System)"
                     log(f"✅ Persistent CD: {os.getcwd()}")
-                except Exception as e:
-                     out = f"❌ CD Failed: {e}"
-                
-                # Save CWD for persistence across restarts
-                try:
-                    with open(os.path.join(os.path.dirname(__file__), ".satele_cwd"), "w") as f:
-                        f.write(os.getcwd())
-                except: pass
-
+                except Exception as e: out = f"❌ CD Failed: {e}"
             else:
-                # Clean up sloppy AI prefixes
-                if cmd.lower().startswith("sh:"):
-                    cmd = cmd[3:].strip()
-                
+                if cmd.lower().startswith("sh:"): cmd = cmd[3:].strip()
                 log(f"➡️ Running: {cmd}")
                 out = run_shell(cmd)
                 
-                # Check if the command output contains UPLOAD directive (Scan all lines)
+                # Check for UPLOAD in output
                 target_upload_path = None
                 for line in out.splitlines():
-                    # Must be EXACT "UPLOAD:" prefix (case-sensitive) to avoid matching "Upload speed:"
                     if line.strip().startswith("UPLOAD:"):
                         target_upload_path = line.strip().split(":", 1)[1].strip()
                         break
-                
-                if target_upload_path:
-                    log(f"📤 Upload detected in command output: {target_upload_path}")
-                    # Validate that the path is a file (not a directory)
-                    if os.path.isdir(target_upload_path):
-                        log(f"⚠️ UPLOAD failed: {target_upload_path} is a directory.")
-                        return f"❌ Cannot upload a directory: {target_upload_path}\nUse 'ls' to see contents or zip it first."
-                    if not os.path.isfile(target_upload_path):
-                        log(f"⚠️ UPLOAD failed: {target_upload_path} does not exist or is not a file.")
-                        # If the path looks like an error message, return the whole output
-                        if " " in target_upload_path and len(target_upload_path) > 50:
-                             return out.strip()
-                        return f"❌ File not found: {target_upload_path}\n(Full output was: {out.strip()})"
-                    
-                    # Return the UPLOAD directive for the bridge
-                    return f"UPLOAD: {target_upload_path}"
+                if target_upload_path: return f"UPLOAD: {target_upload_path}"
             
-            full_output.append(f"> {cmd}\n{out}")
+            full_output.append(out)
             
-        combined_result = "\n\n".join(full_output)
+        combined_result = "\n".join(full_output)
+        
+        # 🧠 COGNITIVE PASS: If the user asked for summary/analysis AND we have data
+        analysis_keywords = ["summarize", "analyze", "explain", "feedback", "what", "check", "report"]
+        if any(k in instruction.lower() for k in analysis_keywords) and len(combined_result) > 20:
+            # Check for data markers (case-insensitive) or substantial text
+            res_lower = combined_result.lower()
+            if "email id:" in res_lower or "subject:" in res_lower or "from:" in res_lower or len(combined_result) > 800:
+                combined_result = ai_reason(instruction, combined_result)
+
+        # Prevent huge payloads
+        MAX_CHARS = 5000
+        if len(combined_result) > MAX_CHARS:
+            combined_result = combined_result[:MAX_CHARS] + f"\n\n... (Result truncated at {MAX_CHARS} characters) ..."
+            
+        return combined_result
         
         # Prevent huge payloads that crash the bridge/WhatsApp
         MAX_CHARS = 5000

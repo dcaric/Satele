@@ -380,6 +380,20 @@ function set_token_prices() {
     echo "📤 Output Price: \$$PRICE_OUT / 1M tokens"
 }
 
+function set_gmail() {
+    local EMAIL=$1
+    local PASS=$2
+    if [ -z "$EMAIL" ] || [ -z "$PASS" ]; then
+        echo "❌ Usage: satele gmail <email> <app_password>"
+        echo "💡 Tip: Use a Google App Password, not your regular password."
+        return 1
+    fi
+    update_env "GMAIL_USER" "$EMAIL"
+    update_env "GMAIL_APP_PASSWORD" "$PASS"
+    echo "✅ Gmail configured for $EMAIL."
+    echo "🔄 Please restart Satele services: 'satele stop && satele start'"
+}
+
 function set_gemini_model() {
     local MODEL=$1
     if [ -z "$MODEL" ]; then
@@ -593,6 +607,7 @@ function help() {
     echo "  ollama stop         Switch back to Cloud Gemini mode"
     echo "  whatsapp            Launch interactive mode to link a device via QR code"
     echo "  setup-sudo          Enable passwordless sudo (Optional, use with caution)"
+    echo "  gmail <user> <pass>  Configure Gmail (e.g. satele gmail your-email@gmail.com \"aaaa aaaa aaaa aaaa\")"
     echo "  install             Install the connection skill globally (for IDE)"
     echo "  link                Enable remote control in the current project"
     echo "  help                Show this message"
@@ -647,6 +662,9 @@ case "$1" in
         ;;
     geminikey)
         set_gemini_key "$2"
+        ;;
+    gmail)
+        set_gmail "$2" "$3"
         ;;
     install)
         install_skill_globally

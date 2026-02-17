@@ -200,8 +200,8 @@ def ai_interpret(instruction, media_path=None):
        - COMMAND MUST BE: `mv {media_path} <destination>`
     
     2. NEVER SWAP THE DIRECTION. The file at {media_path} is the one you must move.
-    3. Use absolute paths for targets outside of your current folder. If referring to your current location (CWD), use `.` or relative paths.
-    4. Respond ONLY with safe bash commands, ONE PER LINE. No explanation.
+    3. Use absolute paths for targets outside of your current folder. If referring to your current location (CWD), use standard unix utilities (pwd, ls, etc.).
+    4. Respond ONLY with safe bash commands, ONE PER LINE. No explanation. No markdown formatting.
     5. YOUR CURRENT LOCATION (CWD): {os.getcwd()}
     6. FOR GUI APPS (Calculator, Chrome), use `sh: open -a "App Name"`. NEVER use this for Speedtest or speed measurements - ALWAYS use the speedtest skill command instead.
     7. TO SEND FILES: If the user mentions a specific file (e.g., 'send me html.zip'), use `UPLOAD:<filename>`. Only use search if the user is ambiguous (e.g., 'send me the latest image').
@@ -210,6 +210,10 @@ def ai_interpret(instruction, media_path=None):
     10. PRESERVE PATH CASE EXACTLY. Do NOT lowercase project names or folder names.
     11. SKILLS TAKE PRECEDENCE: If a command is listed in "AVAILABLE SKILLS" that matches the user's intent, YOU MUST USE THAT COMMAND.
     12. NO DIRECTORY UPLOADS: You cannot use UPLOAD on a directory. For a folder, use `ls -F <path>` or `zip -r folder.zip <path> && echo "UPLOAD:$(realpath folder.zip)"`.
+    13. UTILITY COMMANDS: 
+        - If asked for "current path" or "where am I", use `pwd`.
+        - If asked for "time", use `date`.
+        - If asked for "who am I", use `whoami`.
     {context_str}
     """
     

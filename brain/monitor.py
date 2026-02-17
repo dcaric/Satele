@@ -4,9 +4,24 @@ import subprocess
 import requests
 import json
 import platform
+
+# Compatibility for Python < 3.10
+try:
+    import importlib.metadata as metadata
+    if not hasattr(metadata, "packages_distributions"):
+        def packages_distributions():
+            return {}
+        metadata.packages_distributions = packages_distributions
+except ImportError:
+    pass
+
+def log(msg):
+    print(f"[Monitor] {msg}", flush=True)
+
 import google.generativeai as genai
 import re
 from dotenv import load_dotenv
+
 
 # Determine and store the project root
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -21,7 +36,7 @@ if not os.path.exists(env_path):
         env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config_v2.env")
 
 load_dotenv(env_path)
-print(f"📝 Config loaded from: {env_path}")
+log(f"📝 Config loaded from: {env_path}")
 
 try:
     from memory import Memory
@@ -38,13 +53,12 @@ if os.path.basename(os.getcwd()) == "brain":
 
 # Environment variables loaded at top level
 
-def log(msg):
-    print(f"[Monitor] {msg}", flush=True)
 
 # Configuration
 BASE_URL = os.getenv("REMOTE_BRIDGE_URL", "http://localhost:8000")
 AUTH_TOKEN = os.getenv("BRIDGE_SECRET_KEY", "default-secret-key")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "2"))
 
 # Initialize Gemini if key is available
 if GOOGLE_API_KEY:
@@ -526,7 +540,7 @@ def monitor_loop():
 
     while True:
         try:
-            log("🔍 Polling for tasks...")
+            # log("🔍 Polling for tasks...")
             response = requests.get(
                 f"{BASE_URL}/get-task", 
                 headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
@@ -536,7 +550,8 @@ def monitor_loop():
             if response.status_code == 200:
                 task = response.json()
                 if not task:
-                    # No tasks in queue
+                    # No tasks in queue - respect the poll interval
+                    time.sleep(POLL_INTERVAL)
                     pass
                 else:
                     task_id = task.get('id')

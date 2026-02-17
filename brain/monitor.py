@@ -203,7 +203,7 @@ def ai_interpret(instruction, media_path=None):
     3. Use absolute paths for targets outside of your current folder. If referring to your current location (CWD), use `.` or relative paths.
     4. Respond ONLY with safe bash commands, ONE PER LINE. No explanation.
     5. YOUR CURRENT LOCATION (CWD): {os.getcwd()}
-    6. FOR GUI APPS (Calculator, Chrome), use `sh: open -a "App Name"`. Do NOT use this for measurement or speed tests.
+    6. FOR GUI APPS (Calculator, Chrome), use `sh: open -a "App Name"`. NEVER use this for Speedtest or speed measurements - ALWAYS use the speedtest skill command instead.
     7. TO SEND FILES: If the user mentions a specific file (e.g., 'send me html.zip'), use `UPLOAD:<filename>`. Only use search if the user is ambiguous (e.g., 'send me the latest image').
     8. TO FIND LATEST FILE: Use `echo "UPLOAD:$(find . -maxdepth 1 -type f -not -path '*/.*' -exec stat -f "%m %N" {{}} + | sort -rn | head -1 | cut -d' ' -f2- | xargs realpath)"`
     9. VERIFY BEFORE SENDING: Avoid `UPLOAD` on directories. If a search finds a directory, it will fail.

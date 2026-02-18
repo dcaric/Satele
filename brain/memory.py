@@ -95,5 +95,9 @@ if __name__ == "__main__":
         try:
             m = Memory(silent=True)
             print(m.get_count())
-        except:
-            print("0")
+        except Exception as e:
+            # Print error to stderr so it can be seen if needed, but return 0 for the script
+            import traceback
+            # sys.stderr.write(f"Memory Error: {e}\n")
+            # For the CLI, we want to know it failed
+            print(f"ERROR: {e}")

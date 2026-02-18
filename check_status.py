@@ -22,7 +22,7 @@ def get_status():
         print(f"⚠️ Process check error: {e}")
 
     # Check config
-    config_path = "/Users/dcaric/Working/ml/AntigravityMessages/brain/satele.config"
+    config_path = os.path.join(os.getcwd(), "satele.config")
     try:
         with open(config_path, "r") as f:
             lines = f.readlines()

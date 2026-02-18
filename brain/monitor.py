@@ -585,6 +585,17 @@ def monitor_loop():
                                 timeout=5
                             )
                             task_processed = True
+                        elif instruction and re.search(r"(?i)\b(check status|system status|are you alive)\b", instruction):
+                            log("📊 Internal Status Check Triggered.")
+                            out = run_shell("./satele status")
+                            result = f"📊 **System Status:**\n{out}"
+                            requests.post(
+                                f"{BASE_URL}/report-result",
+                                json={"id": task_id, "output": result},
+                                headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
+                                timeout=5
+                            )
+                            task_processed = True
                         else:
                             result = process_instruction(instruction, media_path)
                             

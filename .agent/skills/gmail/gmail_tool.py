@@ -148,11 +148,30 @@ def fetch_full(query_params):
                 content = ""
                 if msg.is_multipart():
                     for part in msg.walk():
-                        if part.get_content_type() == "text/plain":
+                        content_type = part.get_content_type()
+                        if content_type == "text/plain":
                             try:
                                 payload = part.get_payload(decode=True)
                                 if payload:
                                     content += payload.decode(errors='ignore')
+                            except: pass
+                        elif content_type == "text/html" and not content:
+                            # Fallback to HTML if no plain text found
+                            try:
+                                payload = part.get_payload(decode=True)
+                                if payload:
+                                    html_content = payload.decode(errors='ignore')
+                                    # Simple HTML to text conversion
+                                    import re
+                                    # Remove script and style tags
+                                    html_content = re.sub(r'<(script|style)[^>]*>.*?</\1>', '', html_content, flags=re.DOTALL)
+                                    # Remove HTML tags
+                                    html_content = re.sub(r'<[^>]+>', '\n', html_content)
+                                    # Decode HTML entities
+                                    html_content = html_content.replace('&nbsp;', ' ').replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
+                                    # Clean up whitespace
+                                    html_content = re.sub(r'\n\s*\n', '\n', html_content)
+                                    content += html_content
                             except: pass
                 else:
                     try:

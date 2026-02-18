@@ -106,6 +106,7 @@ def read_email(msg_id):
 def fetch_full(query_params):
     """
     Finds emails matching query and returns a text dump of all bodies.
+    Supports optional 'filter' parameter to extract specific sections.
     """
     mail = connect()
     mail.select("inbox")
@@ -130,6 +131,7 @@ def fetch_full(query_params):
         return f"No emails found for content fetch matching: {search_query}"
         
     results = []
+    content_filter = query_params.get('filter', '').lower()  # Optional filter keyword
     
     # Limit to prevent token overflow
     limit = int(query_params.get('limit', 5))
@@ -158,6 +160,22 @@ def fetch_full(query_params):
                         if payload:
                             content = payload.decode(errors='ignore')
                     except: pass
+                
+                # Apply content filter if specified
+                if content_filter:
+                    filtered_lines = []
+                    for line in content.split('\n'):
+                        if content_filter in line.lower():
+                            # Include context: 2 lines before and after
+                            line_idx = content.split('\n').index(line)
+                            start = max(0, line_idx - 2)
+                            end = min(len(content.split('\n')), line_idx + 3)
+                            filtered_lines.extend(content.split('\n')[start:end])
+                            break  # Only get first match per email
+                    if filtered_lines:
+                        content = '\n'.join(filtered_lines)
+                    else:
+                        content = f"[Filter '{content_filter}' not found in email]"
                 
                 results.append(f"--- EMAIL ID: {i.decode()} ---\nSubject: {subject}\nFrom: {msg.get('From')}\nDate: {msg.get('Date')}\nContent:\n{content}\n")
     

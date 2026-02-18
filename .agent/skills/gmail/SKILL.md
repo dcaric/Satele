@@ -16,8 +16,8 @@ This skill allows Satele to access your Gmail inbox to find specific information
    ```
 
 ## Tools
-1. **Search Emails**: `python3 .agent/skills/gmail/gmail_tool.py search '{"days": 7, "subject": "query"}'` (Returns metadata/IDs only)
-2. **Fetch Full Content**: `python3 .agent/skills/gmail/gmail_tool.py fetch_full '{"days": 7, "subject": "query", "limit": 5}'` (Returns full bodies for summarization)
+1. **Search Emails**: `python3 .agent/skills/gmail/gmail_tool.py search '{"days": 7, "subject": "query", "sender": "your-email@gmail.com"}'` (Returns metadata/IDs only)
+2. **Fetch Full Content**: `python3 .agent/skills/gmail/gmail_tool.py fetch_full '{"days": 7, "subject": "query", "limit": 5, "filter": "equity"}'` (Returns full bodies for summarization. Use 'filter' to extract specific sections)
 3. **Read Email**: `python3 .agent/skills/gmail/gmail_tool.py read <id>`
 
 ### Query JSON Format:

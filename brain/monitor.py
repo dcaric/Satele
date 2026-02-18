@@ -124,16 +124,17 @@ def get_skills_context_legacy():
                         if line.startswith("name:"):
                             name = line.replace("name:", "").strip()
                     
-                    # Extract ALL commands (support python3, bash, or direct shell commands like ls, find, cat, head, realpath)
-                    all_matches = re.finditer(r'`((?:python3|bash|ls|find|cat|head|realpath) [^`]+)`', content)
+                    # Extract ALL commands (look for python3 commands in backticks)
+                    # Match both inline and multiline code blocks
+                    all_matches = re.finditer(r'`(python3\s+[^`]+)`', content, re.MULTILINE)
                     commands = []
                     for match in all_matches:
-                        cmd_text = match.group(1)
-                        # Ensure absolute paths
+                        cmd_text = match.group(1).strip()
+                        # Ensure absolute paths for .agent/skills
                         if ".agent/skills/" in cmd_text:
-                            cmd_text = re.sub(r'\.?agent/skills/', os.path.join(PROJECT_ROOT, ".agent/skills/"), cmd_text)
+                            cmd_text = cmd_text.replace(".agent/skills/", os.path.join(PROJECT_ROOT, ".agent/skills/"))
                         elif "brain/" in cmd_text:
-                            cmd_text = re.sub(r'\.?brain/', os.path.join(PROJECT_ROOT, "brain/"), cmd_text)
+                            cmd_text = cmd_text.replace("brain/", os.path.join(PROJECT_ROOT, "brain/"))
                         commands.append(cmd_text)
                     
                     if desc and commands:
@@ -141,6 +142,7 @@ def get_skills_context_legacy():
                         for c in commands:
                             skills_context += f"  COMMAND: {c}\n"
                         found_any = True
+                        log(f"📦 Loaded skill: {name} ({len(commands)} commands)")
     except Exception as e:
         log(f"Error loading skills: {e}")
     

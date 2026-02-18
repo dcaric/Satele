@@ -164,18 +164,28 @@ def fetch_full(query_params):
                 # Apply content filter if specified
                 if content_filter:
                     filtered_lines = []
-                    for line in content.split('\n'):
-                        if content_filter in line.lower():
-                            # Include context: 2 lines before and after
-                            line_idx = content.split('\n').index(line)
-                            start = max(0, line_idx - 2)
-                            end = min(len(content.split('\n')), line_idx + 3)
-                            filtered_lines.extend(content.split('\n')[start:end])
+                    content_lines = content.split('\n')
+                    
+                    # Normalize filter term (remove special chars, extra spaces)
+                    import re
+                    normalized_filter = re.sub(r'[^\w\s]', '', content_filter).strip()
+                    
+                    for idx, line in enumerate(content_lines):
+                        # Normalize line for comparison
+                        normalized_line = re.sub(r'[^\w\s]', '', line.lower()).strip()
+                        
+                        # Check if filter keywords appear in the line
+                        if normalized_filter in normalized_line or any(word in normalized_line for word in normalized_filter.split()):
+                            # Include context: 2 lines before and 5 lines after (to capture full sections)
+                            start = max(0, idx - 2)
+                            end = min(len(content_lines), idx + 6)
+                            filtered_lines = content_lines[start:end]
                             break  # Only get first match per email
+                    
                     if filtered_lines:
                         content = '\n'.join(filtered_lines)
                     else:
-                        content = f"[Filter '{content_filter}' not found in email]"
+                        content = f"[Filter '{content_filter}' not found in email. Try: 'equity', 'portfolio', 'performance', or 'summary']"
                 
                 results.append(f"--- EMAIL ID: {i.decode()} ---\nSubject: {subject}\nFrom: {msg.get('From')}\nDate: {msg.get('Date')}\nContent:\n{content}\n")
     

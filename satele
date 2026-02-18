@@ -213,13 +213,22 @@ function set_name() {
     echo "🔄 Note: You must restart satele (stop/start) to apply the change."
 }
 
+# Robust process check function
+function is_running() {
+    local pattern=$1
+    if pgrep -f "$pattern" > /dev/null 2>&1; then return 0; fi
+    # Fallback to ps if pgrep fails (useful in some environments)
+    if ps aux | grep -v grep | grep -q "$pattern"; then return 0; fi
+    return 1
+}
+
 function status() {
     echo "📊 Satele Status:"
     
     # Check Processes
-    if lsof -i :8000 > /dev/null 2>&1 || pgrep -f "Python server/main.py" > /dev/null; then echo "🔹 FastAPI: RUNNING"; else echo "🔸 FastAPI: STOPPED"; fi
-    if pgrep -f "whatsapp_bridge.js" > /dev/null; then echo "🔹 WhatsApp Bridge: RUNNING"; else echo "🔸 WhatsApp Bridge: STOPPED"; fi
-    if pgrep -f "monitor.py" > /dev/null; then echo "🔹 AI Monitor: RUNNING"; else echo "🔸 AI Monitor: STOPPED"; fi
+    if lsof -i :8000 > /dev/null 2>&1 || is_running "server/main.py"; then echo "🔹 FastAPI: RUNNING"; else echo "🔸 FastAPI: STOPPED"; fi
+    if is_running "whatsapp_bridge.js"; then echo "🔹 WhatsApp Bridge: RUNNING"; else echo "🔸 WhatsApp Bridge: STOPPED"; fi
+    if is_running "monitor.py"; then echo "🔹 AI Monitor: RUNNING"; else echo "🔸 AI Monitor: STOPPED"; fi
 
     # Get AI Provider and Model
     local AI_PROVIDER=$(get_env_var "AI_PROVIDER" "gemini")

@@ -181,6 +181,26 @@ function stop() {
     echo "✅ All Satele processes terminated."
 }
 
+function restart() {
+    echo "♻️ Restarting Satele in 1 second..."
+    # Run in background subshell to allow the current command to return to the caller (monitor.py)
+    # This avoids the connection being cut before the result is reported.
+    (sleep 1; stop; start) > /dev/null 2>&1 &
+    echo "✅ Restart command received. Services will refresh momentarily."
+}
+
+function gitpull() {
+    echo "📥 Pulling latest changes from Git..."
+    cd "$BASE_DIR"
+    if [ -d ".git" ]; then
+        git pull
+        echo "✅ Git pull complete."
+    else
+        echo "❌ Error: Not a git repository."
+        return 1
+    fi
+}
+
 function set_name() {
     local NEW_NAME=$1
     if [ -z "$NEW_NAME" ]; then
@@ -610,6 +630,8 @@ function help() {
     echo "  gmail <user> <pass>  Configure Gmail (e.g. satele gmail your-email@gmail.com \"aaaa aaaa aaaa aaaa\")"
     echo "  install             Install the connection skill globally (for IDE)"
     echo "  link                Enable remote control in the current project"
+    echo "  gitpull             Pull latest changes from git repository"
+    echo "  restart             Restart all Satele services safely"
     echo "  help                Show this message"
     echo ""
     echo "Logs:"
@@ -684,6 +706,12 @@ case "$1" in
     setup-sudo)
         echo "🔐 Starting sudo configuration..."
         sudo "$BASE_DIR/setup_sudo.sh"
+        ;;
+    gitpull)
+        gitpull
+        ;;
+    restart)
+        restart
         ;;
     *)
         help

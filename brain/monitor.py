@@ -561,6 +561,30 @@ def monitor_loop():
                         # Satele Logic: If the user says "use gravity", we let the Antigravity Agent handle it.
                         if instruction and "use gravity" in instruction.lower():
                             log(f"🧠 Handoff: '{instruction}' -> Letting Antigravity Agent handle this.")
+                        elif instruction and re.search(r"(?i)\b(restart satele|reboot satele)\b", instruction):
+                            log("♻️ Internal Restart Triggered.")
+                            result = "♻️ **Restarting Satele.** I will be back in a moment..."
+                            # Send response BEFORE killing ourselves
+                            requests.post(
+                                f"{BASE_URL}/report-result",
+                                json={"id": task_id, "output": result},
+                                headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
+                                timeout=5
+                            )
+                            # Actual restart
+                            os.system("./satele restart")
+                            task_processed = True
+                        elif instruction and re.search(r"(?i)\b(git pull|update satele|pull changes)\b", instruction):
+                            log("📥 Internal Git Pull Triggered.")
+                            out = run_shell("./satele gitpull")
+                            result = f"📥 **System Update:**\n{out}"
+                            requests.post(
+                                f"{BASE_URL}/report-result",
+                                json={"id": task_id, "output": result},
+                                headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
+                                timeout=5
+                            )
+                            task_processed = True
                         else:
                             result = process_instruction(instruction, media_path)
                             

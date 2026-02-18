@@ -561,7 +561,7 @@ def monitor_loop():
                         # Satele Logic: If the user says "use gravity", we let the Antigravity Agent handle it.
                         if instruction and "use gravity" in instruction.lower():
                             log(f"🧠 Handoff: '{instruction}' -> Letting Antigravity Agent handle this.")
-                        elif instruction and re.search(r"(?i)\b(restart satele|reboot satele)\b", instruction):
+                        elif instruction and re.search(r"(?i)(restart|reboot).*satele", instruction):
                             log("♻️ Internal Restart Triggered.")
                             result = "♻️ **Restarting Satele.** I will be back in a moment..."
                             # Send response BEFORE killing ourselves
@@ -574,7 +574,7 @@ def monitor_loop():
                             # Actual restart
                             os.system("./satele restart")
                             task_processed = True
-                        elif instruction and re.search(r"(?i)\b(git pull|update satele|pull changes)\b", instruction):
+                        elif instruction and re.search(r"(?i)(git pull|update.*satele|pull.*changes)", instruction):
                             log("📥 Internal Git Pull Triggered.")
                             out = run_shell("./satele gitpull")
                             result = f"📥 **System Update:**\n{out}"
@@ -585,7 +585,7 @@ def monitor_loop():
                                 timeout=5
                             )
                             task_processed = True
-                        elif instruction and re.search(r"(?i)\b(check status|system status|are you alive)\b", instruction):
+                        elif instruction and re.search(r"(?i)(status|alive)", instruction):
                             log("📊 Internal Status Check Triggered.")
                             out = run_shell("./satele status")
                             result = f"📊 **System Status:**\n{out}"

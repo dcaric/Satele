@@ -385,8 +385,15 @@ def ai_reason(instruction, tool_output):
         else:
             if not GOOGLE_API_KEY:
                 return f"⚠️ Analysis requires GOOGLE_API_KEY. Raw output:\n{tool_output}"
-            response = model.generate_content(f"CRITICAL: The user wants a specific answer to: '{instruction}'. Do NOT provide a general summary of the text. Find the exact detail or number requested in the DATA below and provide it directly.\n\nDATA:\n{tool_output}")
-            return response.text.strip()
+            # Use a more forceful "Short Answer" prompt
+            response = model.generate_content(f"Answer the QUESTION: '{instruction}' using ONLY the DATA provided. If a specific number is requested, reply with ONLY that number. Do NOT summarize or analyze other parts of the data.\n\nDATA:\n{tool_output}")
+            res_text = response.text.strip()
+            # If the user asked for equity/capital, ensure we aren't giving a long essay
+            if any(k in instruction.lower() for k in ["equity", "capital", "total"]) and len(res_text) > 300:
+                # Force another pass if it's too long
+                response = model.generate_content(f"You were too talkative. Extract ONLY the piece of data for '{instruction}' from this text in one short sentence: {res_text}")
+                res_text = response.text.strip()
+            return f"{res_text}"
     except Exception as e:
         log(f"Reasoning Error: {e}")
         return tool_output
@@ -476,14 +483,9 @@ def process_instruction(instruction, media_path=None):
         combined_result = "\n".join(full_output)
         
         # 🧠 COGNITIVE PASS: If the user asked for summary/analysis/specific detail AND we have data
-        # Use word boundaries for keywords to avoid accidental triggers like "Report" in a subject
         import re
-        analysis_keywords = [r"\bsummarize\b", r"\banalyze\b", r"\bextract\b", r"\bwhat\b", r"\bhow\b", r"\bfeedback\b", r"\bstatus\b", r"\bis\b"]
+        analysis_keywords = [r"\bsummarize\b", r"\banalyze\b", r"\bextract\b", r"\bwhat\b", r"\bhow\b", r"\bfeedback\b", r"\bstatus\b", r"\bis\b", r"\bequity\b", r"\bbalance\b", r"\btotal\b", r"\bworth\b"]
         should_reason = any(re.search(k, instruction.lower()) for k in analysis_keywords)
-        
-        # Also trigger if the user asks for a specific extraction even without keywords
-        if not should_reason and any(word in instruction.lower() for word in ["equity", "profit", "balance", "total"]):
-            should_reason = True
 
         if should_reason and len(combined_result) > 20:
             # Check for data markers (case-insensitive) or substantial text

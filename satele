@@ -182,10 +182,9 @@ function stop() {
 }
 
 function restart() {
-    echo "♻️ Restarting Satele in 1 second..."
-    # Run in background subshell to allow the current command to return to the caller (monitor.py)
-    # This avoids the connection being cut before the result is reported.
-    (sleep 1; stop; start) > /dev/null 2>&1 &
+    echo "♻️ Restarting Satele in 2 seconds..."
+    # Run in background via nohup to ensure the parent process can exit first
+    nohup bash -c "sleep 2; stop; start" > /dev/null 2>&1 &
     echo "✅ Restart command received. Services will refresh momentarily."
 }
 

@@ -150,7 +150,7 @@ def get_skills_context_legacy():
 
 def ai_interpret(instruction, media_path=None):
     """
-    Uses Gemini or Ollama to translate natural language (or voice) into a safe shell command.
+    [v2.2] Uses Gemini or Ollama to translate natural language into a bash command.
     """
     # Load audio if present (Gemini only supports this via API, Ollama likely plain text)
     # We prepare content_parts but might not use it for Ollama
@@ -357,46 +357,58 @@ def ai_interpret(instruction, media_path=None):
 
 def ai_reason(instruction, tool_output):
     """
-    Second pass: Performs analysis/summarization on the raw tool output using the active provider.
+    Second pass: Performs specific data extraction or analysis on the tool output.
     """
     provider = os.getenv("AI_PROVIDER", "gemini").lower()
-    
-    # Prune output if it's too long for the model
-    if len(tool_output) > 15000:
-        tool_output = tool_output[:15000] + "...(truncated for analysis)..."
+    log(f"🧠 Reasoning Pass ({provider.upper()}): Extracting answer...")
 
-    log(f"🧠 Reasoning Pass ({provider.upper()}): Analyzing output...")
+    # Prune output if it's too long
+    if len(tool_output) > 12000:
+        tool_output = tool_output[:12000] + "...(truncated)..."
+
+    # Aggressive extraction prompt
+    extraction_prompt = f"""
+    [DATA]
+    {tool_output}
     
-    prompt = f"Analyze this data and answer: {instruction}\n\nDATA:\n{tool_output}"
+    [INSTRUCTION]
+    {instruction}
     
+    [RULES]
+    1. EXTRAC T the exact answer from the [DATA] above.
+    2. If a specific number or status is requested (like equity, balance, or capital), provide ONLY that number/sentence.
+    3. NO summaries. NO "Here is your data". NO market analysis.
+    4. If the information isn't in the DATA, say "Not found in data."
+    
+    ANSWER (ONE SHORT SENTENCE):"""
+
     try:
         if provider == "ollama":
             import requests
             model_name = os.getenv("OLLAMA_MODEL", "gemma:2b")
-            # Extremely strict extraction prompt for local models
-            sys_msg = "You are a DATA EXTRACTION BOT. Answer only the USER QUESTION using the DATA. Do NOT summarize the entire data. Do NOT provide market analysis. If search for a specific value (equity, total capital, balance), find that exact number and return it in one sentence."
             payload = {
                 "model": model_name,
-                "prompt": f"SYSTEM: {sys_msg}\nUSER QUESTION: {instruction}\n\nDATA:\n{tool_output}\n\nDIRECT ANSWER:",
-                "stream": False
+                "prompt": extraction_prompt,
+                "stream": False,
+                "options": {"num_predict": 100} # Cap response length
             }
             resp = requests.post("http://localhost:11434/api/generate", json=payload, timeout=60)
-            return resp.json().get("response", "Error: No response from Ollama").strip()
+            res_text = resp.json().get("response", "Error").strip()
         else:
             if not GOOGLE_API_KEY:
-                return f"⚠️ Analysis requires GOOGLE_API_KEY. Raw output:\n{tool_output}"
-            # Use a more forceful "Short Answer" prompt
-            response = model.generate_content(f"Answer the QUESTION: '{instruction}' using ONLY the DATA provided. If a specific number is requested, reply with ONLY that number. Do NOT summarize or analyze other parts of the data.\n\nDATA:\n{tool_output}")
+                return f"⚠️ Analysis requires key. Raw:\n{tool_output}"
+            response = model.generate_content(extraction_prompt)
             res_text = response.text.strip()
-            # If the user asked for equity/capital, ensure we aren't giving a long essay
-            if any(k in instruction.lower() for k in ["equity", "capital", "total"]) and len(res_text) > 300:
-                # Force another pass if it's too long
-                response = model.generate_content(f"You were too talkative. Extract ONLY the piece of data for '{instruction}' from this text in one short sentence: {res_text}")
-                res_text = response.text.strip()
-            return f"{res_text}"
+
+        # Final Guard: If the AI was still too chatty, force it down
+        if len(res_text) > 400:
+            res_text = res_text[:400] + "..."
+            
+        return f"[v2.2] {res_text}"
+
     except Exception as e:
         log(f"Reasoning Error: {e}")
-        return tool_output
+        return f"[Error] {tool_output[:500]}..."
 
 def process_instruction(instruction, media_path=None):
     log(f"📩 Processing: {instruction} (Media: {media_path is not None})")

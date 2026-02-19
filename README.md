@@ -116,12 +116,12 @@ To use `satele` from anywhere (instead of `./satele`), add it to your shell prof
 
 **On macOS (Zsh):**
 ```bash
-echo 'export PATH="$HOME/satele:$PATH"' >> ~/.zshrc && source ~/.zshrc
+echo 'export PATH="$HOME/Satele:$PATH"' >> ~/.zshrc && source ~/.zshrc
 ```
 
 **On Linux (Bash):**
 ```bash
-echo 'export PATH="$HOME/satele:$PATH"' >> ~/.bashrc && source ~/.bashrc
+echo 'export PATH="$HOME/Satele:$PATH"' >> ~/.bashrc && source ~/.bashrc
 ```
 
 Now you can just type `satele status` from any folder!

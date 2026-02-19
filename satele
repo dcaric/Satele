@@ -50,29 +50,42 @@ function update_env() {
     local VAL=$2
     local ENV_FILE="$BASE_DIR/satele.config"
     
-    # If missing, try to initialize
-    if [ ! -f "$ENV_FILE" ]; then
-        if [ -f "$BASE_DIR/satele.config.example" ]; then
-            cp "$BASE_DIR/satele.config.example" "$ENV_FILE"
-            echo "📝 Initialized satele.config from example."
-        elif [ -f "$BASE_DIR/.env" ]; then
-            # Migrate basic vars if old .env exists
-            cp "$BASE_DIR/.env" "$ENV_FILE"
-            echo "📝 Migrated config from old .env file."
-        else
-            touch "$ENV_FILE"
-        fi
+    # Try using Python to update the config if shell sed/redirect fails due to permissions
+    # We use a temp file in /tmp which is usually writeable
+    local TMP_CONFIG="/tmp/satele_config_update"
+    
+    # Read current content safely
+    local CONTENT=""
+    if [ -f "$ENV_FILE" ]; then 
+        CONTENT=$(cat "$ENV_FILE" 2>/dev/null || echo "")
     fi
-
-    if grep -q "^$KEY=" "$ENV_FILE"; then
-        if [ "$OS_TYPE" == "Darwin" ]; then
-            sed -i '' "s|^$KEY=.*|$KEY=$VAL|" "$ENV_FILE"
-        else
-            sed -i "s|^$KEY=.*|$KEY=$VAL|" "$ENV_FILE"
-        fi
-    else
-        echo "$KEY=$VAL" >> "$ENV_FILE"
-    fi
+    
+    # Use python for robust key-value replacement
+    "$PYTHON_CMD" -c "
+import os
+key, val = '$KEY', '$VAL'
+env_file = '$ENV_FILE'
+lines = []
+found = False
+if os.path.exists(env_file):
+    try:
+        with open(env_file, 'r') as f:
+            for line in f:
+                if line.startswith(key + '='):
+                    lines.append(f'{key}={val}\n')
+                    found = True
+                else:
+                    lines.append(line)
+    except: pass
+if not found:
+    lines.append(f'{key}={val}\n')
+try:
+    with open(env_file, 'w') as f:
+        f.writelines(lines)
+    print('SUCCESS')
+except Exception as e:
+    print(f'ERROR: {e}')
+" > /dev/null 2>&1
 }
 
 function get_env_var() {
@@ -80,10 +93,12 @@ function get_env_var() {
     local DEFAULT=$2
     local VAL=""
     
+    # Try reading via grep, but handle 'Operation not permitted'
     if [ -f "$BASE_DIR/satele.config" ]; then
         VAL=$(grep "^$KEY=" "$BASE_DIR/satele.config" 2>/dev/null | cut -d '=' -f2)
     fi
     
+    # Fallback to brain config if primary is locked/missing
     if [ -z "$VAL" ] && [ -f "$BASE_DIR/brain/satele.config" ]; then
         VAL=$(grep "^$KEY=" "$BASE_DIR/brain/satele.config" 2>/dev/null | cut -d '=' -f2)
     fi
@@ -174,9 +189,10 @@ function start() {
     if [ "$AWAKE" = "true" ]; then
         # Use stronger assertions to ensure it stays awake
         if [[ "$OSTYPE" == "darwin"* ]]; then
-            if ! pgrep -f "caffeinate -dimsu" > /dev/null; then
+            # -disu (display, idle, system-on-AC, user-active)
+            if ! pgrep -f "caffeinate -disu" > /dev/null; then
                 echo "☕️ Restoring persistent Awake state..."
-                nohup caffeinate -dimsu sleep infinity > /dev/null 2>&1 &
+                nohup caffeinate -disu sleep infinity > /dev/null 2>&1 &
             fi
         else
             if ! pgrep -f "sleep infinity" > /dev/null; then
@@ -219,24 +235,19 @@ function gitpull() {
 
 function system_awake() {
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        echo "☕️ Keeping Mac awake (all assertions active: display, idle, disk, system)..."
-        # -d (display), -i (idle), -m (disk), -s (system sleep on AC), -u (user active)
-        # We run 'sleep infinity' to keep the assertions alive
-        if pgrep -f "caffeinate -dimsu" > /dev/null; then
-            echo "✅ caffeinate is already running with full assertions."
+        echo "☕️ Keeping Mac awake..."
+        # Simplified pgrep check
+        if pgrep caffeinate > /dev/null; then
+            echo "✅ caffeinate is already running."
         else
-            pkill caffeinate 2>/dev/null # Kill old less-aggressive instances
-            nohup caffeinate -dimsu sleep infinity > /dev/null 2>&1 &
-            echo "✅ caffeinate started with -dimsu flags."
+            # -disu (display, idle, system-on-AC, user-active)
+            # Use 'cat' instead of 'sleep infinity' as a very lightweight process that never exits
+            nohup caffeinate -disu cat > /dev/null 2>&1 &
+            echo "✅ caffeinate started."
         fi
         
-        # If passwordless sudo is configured, use pmset for extra assurance (especially for lid closure)
-        if sudo -n true 2>/dev/null; then
-            echo "🛡️ Sudo available: Disabling system sleep via pmset (lid-closed support)."
-            sudo pmset -a sleep 0 > /dev/null 2>&1
-            sudo pmset -a displaysleep 0 > /dev/null 2>&1
-            # Note: We don't change hibernatemode as that's safer to leave alone
-        fi
+        # Best effort attempt at pmset if sudo is available
+        sudo -n pmset -a sleep 0 displaysleep 0 > /dev/null 2>&1
         
         update_env "SYSTEM_AWAKE" "true"
     else
@@ -286,9 +297,11 @@ function set_name() {
 # Robust process check function
 function is_running() {
     local pattern=$1
-    if pgrep -f "$pattern" > /dev/null 2>&1; then return 0; fi
-    # Fallback to ps if pgrep fails (useful in some environments)
-    if ps aux | grep -v grep | grep -q "$pattern"; then return 0; fi
+    if pgrep "$pattern" > /dev/null 2>&1; then return 0; fi
+    # Only fall back to ps if it's available
+    if command -v ps &> /dev/null; then
+        if ps aux 2>/dev/null | grep -v grep | grep -q "$pattern"; then return 0; fi
+    fi
     return 1
 }
 
@@ -302,15 +315,23 @@ function status() {
     
     # Power Status
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        if pgrep -f "caffeinate -dimsu" > /dev/null; then
-            local AWAKE_MSG="🔹 Power: AWAKE (Aggressive)"
-            # Check if pmset sleep is actually 0 for extra confirmation
-            if pmset -g custom | grep -A 15 "AC Power" | grep -q " sleep.*0"; then
-                AWAKE_MSG="$AWAKE_MSG + System Sleep Disabled"
+        local AWAKE_DETECTED=0
+        if pgrep caffeinate > /dev/null; then
+            AWAKE_DETECTED=1
+        elif pmset -g assertions 2>/dev/null | grep -q "UserIsActive\|NoIdleSleepAssertion\|PreventUserIdleSystemSleep"; then
+            # Double check it's not just the display tickle
+            if pmset -g assertions 2>/dev/null | grep "BackgroundIndexing\|NoIdleSleepAssertion\|PreventUserIdleSystemSleep" | grep -qv "UserIsActive"; then
+                AWAKE_DETECTED=1
+            fi
+        fi
+
+        if [ $AWAKE_DETECTED -eq 1 ]; then
+            local AWAKE_MSG="🔹 Power: AWAKE"
+            # Best effort confirmation of lid-closed settings
+            if pmset -g custom 2>/dev/null | grep -A 20 "AC Power" | grep -q " sleep.*0"; then
+                AWAKE_MSG="$AWAKE_MSG (Persistent + No Sleep)"
             fi
             echo "$AWAKE_MSG"
-        elif pgrep -f "caffeinate" > /dev/null; then
-            echo "🔹 Power: AWAKE (Standard)"
         else
             echo "🔸 Power: NORMAL"
         fi

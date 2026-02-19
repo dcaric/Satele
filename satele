@@ -267,12 +267,13 @@ function system_awake() {
         update_env "SYSTEM_AWAKE" "true"
     else
         echo "🐧 Keeping Linux awake..."
-        # Using systemd-inhibit to block sleep/idle
-        if pgrep -f "systemd-inhibit .* sleep infinity" > /dev/null; then
+        # Using systemd-inhibit to block sleep, idle, and lid-switch
+        if pgrep -f "systemd-inhibit .* Satele" > /dev/null; then
              echo "✅ systemd-inhibit is already running."
         else
-            nohup systemd-inhibit --what=idle:sleep --who=Satele --why="Remote awake command" --mode=block sleep infinity > /dev/null 2>&1 &
-            echo "✅ systemd-inhibit started in background."
+            # --what=idle:sleep:handle-lid-switch ensures it stays awake even when lid is closed
+            nohup systemd-inhibit --what=idle:sleep:handle-lid-switch --who=Satele --why="Remote awake command" --mode=block sleep infinity > /dev/null 2>&1 &
+            echo "✅ systemd-inhibit started (lid-closed support enabled)."
         fi
         update_env "SYSTEM_AWAKE" "true"
     fi
@@ -291,8 +292,9 @@ function system_awake_stop() {
         echo "✅ caffeinate stopped and sleep re-enabled."
     else
         echo "💤 Allowing Linux to sleep again..."
-        pkill -f "sleep infinity"
-        echo "✅ systemd-inhibit process (sleep infinity) stopped."
+        # Kill specifically our inhibitor
+        pkill -f "systemd-inhibit .* Satele"
+        echo "✅ systemd-inhibit process stopped."
     fi
     update_env "SYSTEM_AWAKE" "false"
 }
@@ -351,7 +353,11 @@ function status() {
             echo "🔸 Power: NORMAL (System may sleep)"
         fi
     else
-        if pgrep -f "sleep infinity" > /dev/null; then echo "🔹 Power: AWAKE (systemd-inhibit)"; else echo "🔸 Power: NORMAL"; fi
+        if pgrep -f "systemd-inhibit .* Satele" > /dev/null; then 
+            echo "🔹 Power: AWAKE (systemd-inhibit + Lid Support)"
+        else 
+            echo "🔸 Power: NORMAL (System may sleep)"
+        fi
     fi
 
     # Get AI Provider and Model

@@ -200,16 +200,29 @@ function gitpull() {
     fi
 }
 
-function mac_awake() {
-    echo "☕️ Keeping Mac awake..."
-    nohup caffeinate -d > /dev/null 2>&1 &
-    echo "✅ caffeinate started in background."
+function system_awake() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "☕️ Keeping Mac awake..."
+        nohup caffeinate -d > /dev/null 2>&1 &
+        echo "✅ caffeinate started in background."
+    else
+        echo "🐧 Keeping Linux awake..."
+        # Using systemd-inhibit to block sleep/idle
+        nohup systemd-inhibit --what=idle:sleep --who=Satele --why="Remote awake command" --mode=block sleep infinity > /dev/null 2>&1 &
+        echo "✅ systemd-inhibit started in background."
+    fi
 }
 
-function mac_awake_stop() {
-    echo "💤 Allowing Mac to sleep again..."
-    pkill caffeinate
-    echo "✅ caffeinate stopped."
+function system_awake_stop() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "💤 Allowing Mac to sleep again..."
+        pkill caffeinate
+        echo "✅ caffeinate stopped."
+    else
+        echo "💤 Allowing Linux to sleep again..."
+        pkill -f "sleep infinity"
+        echo "✅ systemd-inhibit process (sleep infinity) stopped."
+    fi
 }
 
 function set_name() {
@@ -652,8 +665,8 @@ function help() {
     echo "  link                Enable remote control in the current project"
     echo "  gitpull             Pull latest changes from git repository"
     echo "  restart             Restart all Satele services safely"
-    echo "  macawake            Keep Mac awake (caffeinate)"
-    echo "  macawakestop        Allow Mac to sleep again (pkill caffeinate)"
+    echo "  awake               Keep System awake (Mac/Linux)"
+    echo "  awakestop           Allow System to sleep again"
     echo "  help                Show this message"
     echo ""
     echo "Logs:"
@@ -735,11 +748,11 @@ case "$1" in
     restart)
         restart
         ;;
-    macawake)
-        mac_awake
+    awake|macawake)
+        system_awake
         ;;
-    macawakestop)
-        mac_awake_stop
+    awakestop|macawakestop)
+        system_awake_stop
         ;;
     *)
         help

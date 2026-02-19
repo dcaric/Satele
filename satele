@@ -353,8 +353,8 @@ function status() {
 
         if [ $AWAKE_DETECTED -eq 1 ]; then
             local AWAKE_MSG="🔹 Power: AWAKE"
-            # Check for lid-closed suppression
-            if pmset -g custom 2>/dev/null | grep -A 20 "AC Power" | grep -q " sleep.*0"; then
+            # Check for lid-closed suppression (specifically looking for 'sleep 0')
+            if pmset -g custom 2>/dev/null | grep -A 20 "AC Power" | grep -E "^\s*sleep\s+0" > /dev/null; then
                 AWAKE_MSG="$AWAKE_MSG (Lid-Closed Safe)"
             fi
             echo "$AWAKE_MSG"

@@ -18,8 +18,11 @@ BASE_DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
 PYTHON_CMD="python3"
 NODE_CMD="node"
 OS_TYPE=$(uname -s)
-# Log file location
+# Log file location - try to use a writable location
 export LOG_FILE="$BASE_DIR/satele.log"
+if [ ! -w "$LOG_FILE" ] && [ ! -w "$BASE_DIR" ]; then
+    export LOG_FILE="/tmp/satele_$(whoami).log"
+fi
 
 # Helper function to reliably kill processes
 ensure_killed() {
@@ -62,29 +65,35 @@ function update_env() {
     
     # Use python for robust key-value replacement
     "$PYTHON_CMD" -c "
-import os
+import os, sys
 key, val = '$KEY', '$VAL'
 env_file = '$ENV_FILE'
-lines = []
-found = False
-if os.path.exists(env_file):
-    try:
-        with open(env_file, 'r') as f:
-            for line in f:
-                if line.startswith(key + '='):
-                    lines.append(f'{key}={val}\n')
-                    found = True
-                else:
-                    lines.append(line)
-    except: pass
-if not found:
-    lines.append(f'{key}={val}\n')
 try:
+    lines = []
+    if os.path.exists(env_file):
+        with open(env_file, 'r') as f:
+            lines = f.readlines()
+    
+    new_lines = []
+    found = False
+    for line in lines:
+        if line.startswith(key + '='):
+            new_lines.append(f'{key}={val}\n')
+            found = True
+        else:
+            new_lines.append(line)
+    if not found:
+        new_lines.append(f'{key}={val}\n')
+    
     with open(env_file, 'w') as f:
-        f.writelines(lines)
-    print('SUCCESS')
+        f.writelines(new_lines)
 except Exception as e:
-    print(f'ERROR: {e}')
+    # If primary fails, try brain config
+    try:
+        brain_file = os.path.join(os.path.dirname(env_file), 'brain', 'satele.config')
+        with open(brain_file, 'a') as f:
+            f.write(f'\n{key}={val}\n')
+    except: pass
 " > /dev/null 2>&1
 }
 
@@ -134,10 +143,11 @@ function start() {
 
     # Source variables
     set -a
-    if ! source "$ENV_FILE" 2>/dev/null; then
-        if [ -f "$BASE_DIR/brain/satele.config" ]; then
-            source "$BASE_DIR/brain/satele.config"
-        fi
+    if [ -f "$ENV_FILE" ]; then
+        source "$ENV_FILE" 2>/dev/null || true
+    fi
+    if [ -f "$BASE_DIR/brain/satele.config" ]; then
+        source "$BASE_DIR/brain/satele.config" 2>/dev/null || true
     fi
     set +a
     
@@ -236,18 +246,23 @@ function gitpull() {
 function system_awake() {
     if [[ "$OSTYPE" == "darwin"* ]]; then
         echo "☕️ Keeping Mac awake..."
-        # Simplified pgrep check
-        if pgrep caffeinate > /dev/null; then
-            echo "✅ caffeinate is already running."
+        # Check if already running
+        if pgrep caffeinate > /dev/null 2>&1; then
+            echo "✅ caffeinate assertion already active."
         else
-            # -disu (display, idle, system-on-AC, user-active)
-            # Use 'cat' instead of 'sleep infinity' as a very lightweight process that never exits
-            nohup caffeinate -disu cat > /dev/null 2>&1 &
+            # -dis (display, idle, system-on-AC)
+            # Use 'sleep 1000000' as a persistent utility
+            nohup caffeinate -dis sleep 1000000 > /dev/null 2>&1 &
+            sleep 1 
             echo "✅ caffeinate started."
         fi
         
-        # Best effort attempt at pmset if sudo is available
-        sudo -n pmset -a sleep 0 displaysleep 0 > /dev/null 2>&1
+        # Power settings for lid-closure (requires passwordless sudo)
+        if sudo -n true 2>/dev/null; then
+            echo "🛡️ Sudo available: Disabling system sleep via pmset (lid support)."
+            # We set all power modes to 0 (never sleep)
+            sudo pmset -a sleep 0 displaysleep 0 disksleep 0 womp 1 > /dev/null 2>&1
+        fi
         
         update_env "SYSTEM_AWAKE" "true"
     else
@@ -297,8 +312,11 @@ function set_name() {
 # Robust process check function
 function is_running() {
     local pattern=$1
+    # Try pgrep -f first (matches full command line)
+    if pgrep -f "$pattern" > /dev/null 2>&1; then return 0; fi
+    # Fallback to simple pgrep
     if pgrep "$pattern" > /dev/null 2>&1; then return 0; fi
-    # Only fall back to ps if it's available
+    # Fallback to ps grep if allowed
     if command -v ps &> /dev/null; then
         if ps aux 2>/dev/null | grep -v grep | grep -q "$pattern"; then return 0; fi
     fi
@@ -316,24 +334,21 @@ function status() {
     # Power Status
     if [[ "$OSTYPE" == "darwin"* ]]; then
         local AWAKE_DETECTED=0
-        if pgrep caffeinate > /dev/null; then
+        if pgrep caffeinate > /dev/null 2>&1; then
             AWAKE_DETECTED=1
-        elif pmset -g assertions 2>/dev/null | grep -q "UserIsActive\|NoIdleSleepAssertion\|PreventUserIdleSystemSleep"; then
-            # Double check it's not just the display tickle
-            if pmset -g assertions 2>/dev/null | grep "BackgroundIndexing\|NoIdleSleepAssertion\|PreventUserIdleSystemSleep" | grep -qv "UserIsActive"; then
-                AWAKE_DETECTED=1
-            fi
+        elif pmset -g assertions 2>/dev/null | grep -q "PreventUserIdleSystemSleep\|NoIdleSleepAssertion"; then
+            AWAKE_DETECTED=1
         fi
 
         if [ $AWAKE_DETECTED -eq 1 ]; then
             local AWAKE_MSG="🔹 Power: AWAKE"
-            # Best effort confirmation of lid-closed settings
+            # Check for lid-closed suppression
             if pmset -g custom 2>/dev/null | grep -A 20 "AC Power" | grep -q " sleep.*0"; then
-                AWAKE_MSG="$AWAKE_MSG (Persistent + No Sleep)"
+                AWAKE_MSG="$AWAKE_MSG (Lid-Closed Safe)"
             fi
             echo "$AWAKE_MSG"
         else
-            echo "🔸 Power: NORMAL"
+            echo "🔸 Power: NORMAL (System may sleep)"
         fi
     else
         if pgrep -f "sleep infinity" > /dev/null; then echo "🔹 Power: AWAKE (systemd-inhibit)"; else echo "🔸 Power: NORMAL"; fi

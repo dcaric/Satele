@@ -169,6 +169,23 @@ function start() {
     nohup "$PYTHON_CMD" "$BASE_DIR/brain/monitor.py" >> "$LOG_FILE" 2>&1 &
     echo "✅ AI Monitor (Brain) Started"
     
+    # 4. Handle Persistent Awake state
+    local AWAKE=$(get_env_var "SYSTEM_AWAKE" "false")
+    if [ "$AWAKE" = "true" ]; then
+        # Use stronger assertions to ensure it stays awake
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            if ! pgrep -f "caffeinate -dimsu" > /dev/null; then
+                echo "☕️ Restoring persistent Awake state..."
+                nohup caffeinate -dimsu sleep infinity > /dev/null 2>&1 &
+            fi
+        else
+            if ! pgrep -f "sleep infinity" > /dev/null; then
+                echo "☕️ Restoring persistent Awake state..."
+                nohup systemd-inhibit --what=idle:sleep --who=Satele --why="Persistent awake" --mode=block sleep infinity > /dev/null 2>&1 &
+            fi
+        fi
+    fi
+
     echo "✅ Satele is now active in the background."
     echo "📄 Check logs with: tail -f satele.log"
 }
@@ -202,14 +219,36 @@ function gitpull() {
 
 function system_awake() {
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        echo "☕️ Keeping Mac awake..."
-        nohup caffeinate -d > /dev/null 2>&1 &
-        echo "✅ caffeinate started in background."
+        echo "☕️ Keeping Mac awake (all assertions active: display, idle, disk, system)..."
+        # -d (display), -i (idle), -m (disk), -s (system sleep on AC), -u (user active)
+        # We run 'sleep infinity' to keep the assertions alive
+        if pgrep -f "caffeinate -dimsu" > /dev/null; then
+            echo "✅ caffeinate is already running with full assertions."
+        else
+            pkill caffeinate 2>/dev/null # Kill old less-aggressive instances
+            nohup caffeinate -dimsu sleep infinity > /dev/null 2>&1 &
+            echo "✅ caffeinate started with -dimsu flags."
+        fi
+        
+        # If passwordless sudo is configured, use pmset for extra assurance (especially for lid closure)
+        if sudo -n true 2>/dev/null; then
+            echo "🛡️ Sudo available: Disabling system sleep via pmset (lid-closed support)."
+            sudo pmset -a sleep 0 > /dev/null 2>&1
+            sudo pmset -a displaysleep 0 > /dev/null 2>&1
+            # Note: We don't change hibernatemode as that's safer to leave alone
+        fi
+        
+        update_env "SYSTEM_AWAKE" "true"
     else
         echo "🐧 Keeping Linux awake..."
         # Using systemd-inhibit to block sleep/idle
-        nohup systemd-inhibit --what=idle:sleep --who=Satele --why="Remote awake command" --mode=block sleep infinity > /dev/null 2>&1 &
-        echo "✅ systemd-inhibit started in background."
+        if pgrep -f "systemd-inhibit .* sleep infinity" > /dev/null; then
+             echo "✅ systemd-inhibit is already running."
+        else
+            nohup systemd-inhibit --what=idle:sleep --who=Satele --why="Remote awake command" --mode=block sleep infinity > /dev/null 2>&1 &
+            echo "✅ systemd-inhibit started in background."
+        fi
+        update_env "SYSTEM_AWAKE" "true"
     fi
 }
 
@@ -217,12 +256,19 @@ function system_awake_stop() {
     if [[ "$OSTYPE" == "darwin"* ]]; then
         echo "💤 Allowing Mac to sleep again..."
         pkill caffeinate
-        echo "✅ caffeinate stopped."
+        if sudo -n true 2>/dev/null; then
+            echo "🛡️ Restoring default power settings via pmset..."
+            # Restore to common sensible defaults
+            sudo pmset -a sleep 1 > /dev/null 2>&1
+            sudo pmset -a displaysleep 10 > /dev/null 2>&1
+        fi
+        echo "✅ caffeinate stopped and sleep re-enabled."
     else
         echo "💤 Allowing Linux to sleep again..."
         pkill -f "sleep infinity"
         echo "✅ systemd-inhibit process (sleep infinity) stopped."
     fi
+    update_env "SYSTEM_AWAKE" "false"
 }
 
 function set_name() {
@@ -256,9 +302,20 @@ function status() {
     
     # Power Status
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        if is_running "caffeinate"; then echo "🔹 Power: AWAKE (caffeinate)"; else echo "🔸 Power: NORMAL"; fi
+        if pgrep -f "caffeinate -dimsu" > /dev/null; then
+            local AWAKE_MSG="🔹 Power: AWAKE (Aggressive)"
+            # Check if pmset sleep is actually 0 for extra confirmation
+            if pmset -g custom | grep -A 15 "AC Power" | grep -q " sleep.*0"; then
+                AWAKE_MSG="$AWAKE_MSG + System Sleep Disabled"
+            fi
+            echo "$AWAKE_MSG"
+        elif pgrep -f "caffeinate" > /dev/null; then
+            echo "🔹 Power: AWAKE (Standard)"
+        else
+            echo "🔸 Power: NORMAL"
+        fi
     else
-        if is_running "sleep infinity"; then echo "🔹 Power: AWAKE (systemd-inhibit)"; else echo "🔸 Power: NORMAL"; fi
+        if pgrep -f "sleep infinity" > /dev/null; then echo "🔹 Power: AWAKE (systemd-inhibit)"; else echo "🔸 Power: NORMAL"; fi
     fi
 
     # Get AI Provider and Model

@@ -365,8 +365,8 @@ function status() {
             fi
             # Check for system-wide 'Never Sleep' setting
             if pmset -g custom 2>/dev/null | grep -A 20 "AC Power" | grep -E "^\s*sleep\s+0" > /dev/null; then
-                # Only call it 'Lid-Closed Safe' if it's a MacBook
-                if ioreg -r -d 1 -k AppleRawBattery | grep -q "AppleRawBattery" 2>/dev/null; then
+                # Only call it 'Lid-Closed Safe' if it's a MacBook (check for InternalBattery)
+                if pmset -g batt 2>/dev/null | grep -q "InternalBattery"; then
                     AWAKE_MSG="$AWAKE_MSG (Lid-Closed Safe)"
                 else
                     AWAKE_MSG="$AWAKE_MSG (Continuous Mode)"

@@ -253,6 +253,13 @@ function status() {
     if lsof -i :8000 > /dev/null 2>&1 || is_running "server/main.py"; then echo "🔹 FastAPI: RUNNING"; else echo "🔸 FastAPI: STOPPED"; fi
     if is_running "whatsapp_bridge.js"; then echo "🔹 WhatsApp Bridge: RUNNING"; else echo "🔸 WhatsApp Bridge: STOPPED"; fi
     if is_running "monitor.py"; then echo "🔹 AI Monitor: RUNNING"; else echo "🔸 AI Monitor: STOPPED"; fi
+    
+    # Power Status
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        if is_running "caffeinate"; then echo "🔹 Power: AWAKE (caffeinate)"; else echo "🔸 Power: NORMAL"; fi
+    else
+        if is_running "sleep infinity"; then echo "🔹 Power: AWAKE (systemd-inhibit)"; else echo "🔸 Power: NORMAL"; fi
+    fi
 
     # Get AI Provider and Model
     local AI_PROVIDER=$(get_env_var "AI_PROVIDER" "gemini")
@@ -665,7 +672,15 @@ function help() {
     echo "  link                Enable remote control in the current project"
     echo "  gitpull             Pull latest changes from git repository"
     echo "  restart             Restart all Satele services safely"
-    echo "  awake               Keep System awake (Mac/Linux)"
+    
+    local AWAKE_STATE="OFF"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        is_running "caffeinate" && AWAKE_STATE="ON"
+    else
+        is_running "sleep infinity" && AWAKE_STATE="ON"
+    fi
+    
+    echo "  awake               Keep System awake (Mac/Linux) [STATUS: $AWAKE_STATE]"
     echo "  awakestop           Allow System to sleep again"
     echo "  help                Show this message"
     echo ""

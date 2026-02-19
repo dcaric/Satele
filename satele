@@ -331,7 +331,13 @@ function status() {
     # Check Processes
     if lsof -i :8000 > /dev/null 2>&1 || is_running "server/main.py"; then echo "🔹 FastAPI: RUNNING"; else echo "🔸 FastAPI: STOPPED"; fi
     if is_running "whatsapp_bridge.js"; then echo "🔹 WhatsApp Bridge: RUNNING"; else echo "🔸 WhatsApp Bridge: STOPPED"; fi
-    if is_running "monitor.py"; then echo "🔹 AI Monitor: RUNNING"; else echo "🔸 AI Monitor: STOPPED"; fi
+    
+    local INTERVAL=$(get_env_var "POLL_INTERVAL" "2")
+    if is_running "monitor.py"; then 
+        echo "🔹 AI Monitor: RUNNING (Poll: ${INTERVAL}s)"
+    else 
+        echo "🔸 AI Monitor: STOPPED"
+    fi
     
     # Power Status
     if [[ "$OSTYPE" == "darwin"* ]]; then

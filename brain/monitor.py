@@ -61,7 +61,11 @@ if os.path.basename(os.getcwd()) == "brain":
 BASE_URL = os.getenv("REMOTE_BRIDGE_URL", "http://localhost:8000")
 AUTH_TOKEN = os.getenv("BRIDGE_SECRET_KEY", "default-secret-key")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "2"))
+try:
+    POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "2"))
+except (ValueError, TypeError):
+    POLL_INTERVAL = 2
+if POLL_INTERVAL < 0.5: POLL_INTERVAL = 0.5 # Safety minimum
 
 # Initialize Gemini if key is available
 if GOOGLE_API_KEY:
@@ -612,8 +616,8 @@ def monitor_loop():
             else:
                 log(f"⚠️ Server returned status {response.status_code}.")
 
-            if not task_processed:
-                time.sleep(POLL_INTERVAL)
+            # Consistent sleep regardless of task processing to prevent network flood
+            time.sleep(POLL_INTERVAL)
 
                 
         except Exception as e:

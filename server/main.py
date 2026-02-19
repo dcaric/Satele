@@ -116,9 +116,17 @@ async def report_result(
                      })
             else:
                 # Standard Text Reply
+                import re
+                # If output starts with an emoji, or already has a status header (like '📥', '📊', '♻️'), use it as is
+                emoji_pattern = r'^(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])'
+                if re.match(emoji_pattern, output.strip()):
+                    final_text = output
+                else:
+                    final_text = f"✅ Result:\n{output}"
+
                 requests.post("http://localhost:8001/send", json={
                     "to": sender,
-                    "text": f"✅ Result:\n{output}"
+                    "text": final_text
                 })
         except Exception as e:
             print(f"❌ Failed to process reply: {e}")

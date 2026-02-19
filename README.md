@@ -186,9 +186,11 @@ Scan the QR code with WhatsApp (Linked Devices).
 | :--- | :--- |
 | `satele start` | Starts all background services. |
 | `satele stop` | Stops all services. |
+| `satele restart` | Gracefully restarts all services. |
 | `satele status` | Shows health, active AI model, and token usage cost. |
-| `satele name <name>` | Sets a custom wake-word (e.g. `satele name M1`). Useful for multi-bot setups. |
-| `satele setup-sudo` | Configures passwordless `sudo` for Satele (Advanced). |
+| `satele gitpull` | Pulls the latest code from GitHub. |
+| `satele name <name>` | Sets a custom wake-word (e.g. `satele name M1`). |
+| `satele setup-sudo` | Configures passwordless `sudo` for Satele. |
 
 ### 📖 Complete CLI Help
 View all available commands by running `satele help`:
@@ -202,8 +204,10 @@ Commands:
   setup               Install dependencies (Node.js & Python)
   start               Start the bridge services in the background
   stop                Stop all running bridge services
+  restart             Gracefully restart all Satele services
   status              Check if services are running
   kill                Force kill all related processes
+  gitpull             Pull the latest code from GitHub
   name <name>         Set the bot's trigger name (default: satele)
   tokens <in> <out>   Set pricing for Gemini (e.g. 0.50 3.00)
   gemini <model>      Switch Gemini model (e.g. gemini-3-flash-preview)
@@ -376,6 +380,18 @@ This is the most advanced use case. Satele is not just a bot; she is an **output
 *   You are coding with **Antigravity**.
 *   You tell me: *"Run a long test suite. If it fails, ping Antigravity on WhatsApp via Satele."*
 *   I can use the `remote_bridge` skill to send you that alert. Satele becomes the "voice" of your entire digital workforce.
+
+#### 6. Self-Maintenance & Remote Updates
+Satele is designed for long-term remote operation. You can update her code or restart her services directly from WhatsApp without ever needing to touch the host machine.
+
+*   **Remote Git Update:** Satele can pull her own source code from GitHub. Just ask: *"Satele, update yourself"* or run command *"sh: satele gitpull"*.
+*   **Remote Restart:** Satele can restart herself gracefully. If you need a fresh start, just ask: *"Satele, restart yourself"* or run command *"sh: satele restart"*.
+
+> *Updating code via WhatsApp:*
+> ![Git Update Example](images_examples/git_update.jpeg)
+
+> *Restarting Satele remotely:*
+> ![Restart Example](images_examples/restart.jpeg)
 
 ### What makes Satele special?
 Unlike a standard SSH client (which is painful on mobile):

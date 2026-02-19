@@ -393,6 +393,9 @@ Satele is designed for long-term remote operation. You can update her code or re
 > *Restarting Satele remotely:*
 > ![Restart Example](images_examples/restart.jpeg)
 
+> *Updating and restarting:*
+> ![Restart Example](images_examples/gitpull2.jpeg)
+
 ### What makes Satele special?
 Unlike a standard SSH client (which is painful on mobile):
 *   **Context Aware:** She knows you are in Docker but want Windows files (`/host_home`).

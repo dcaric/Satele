@@ -200,6 +200,18 @@ function gitpull() {
     fi
 }
 
+function mac_awake() {
+    echo "☕️ Keeping Mac awake..."
+    nohup caffeinate -d > /dev/null 2>&1 &
+    echo "✅ caffeinate started in background."
+}
+
+function mac_awake_stop() {
+    echo "💤 Allowing Mac to sleep again..."
+    pkill caffeinate
+    echo "✅ caffeinate stopped."
+}
+
 function set_name() {
     local NEW_NAME=$1
     if [ -z "$NEW_NAME" ]; then
@@ -640,6 +652,8 @@ function help() {
     echo "  link                Enable remote control in the current project"
     echo "  gitpull             Pull latest changes from git repository"
     echo "  restart             Restart all Satele services safely"
+    echo "  macawake            Keep Mac awake (caffeinate)"
+    echo "  macawakestop        Allow Mac to sleep again (pkill caffeinate)"
     echo "  help                Show this message"
     echo ""
     echo "Logs:"
@@ -720,6 +734,12 @@ case "$1" in
         ;;
     restart)
         restart
+        ;;
+    macawake)
+        mac_awake
+        ;;
+    macawakestop)
+        mac_awake_stop
         ;;
     *)
         help

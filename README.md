@@ -386,6 +386,8 @@ Satele is designed for long-term remote operation. You can update her code or re
 
 *   **Remote Git Update:** Satele can pull her own source code from GitHub. Just ask: *"Satele, update yourself"* or run command *"sh: satele gitpull"*.
 *   **Remote Restart:** Satele can restart herself gracefully. If you need a fresh start, just ask: *"Satele, restart yourself"* or run command *"sh: satele restart"*.
+*   **Prevent Mac Sleep:** Keep your Mac awake during long tasks. Run command *"sh: satele macawake"*.
+*   **Stop Preventing Sleep:** Allow your Mac to sleep normally again. Run command *"sh: satele macawakestop"*.
 
 > *Updating code via WhatsApp:*
 > ![Git Update Example](images_examples/git_update.jpeg)

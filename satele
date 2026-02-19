@@ -20,8 +20,11 @@ NODE_CMD="node"
 OS_TYPE=$(uname -s)
 # Log file location - try to use a writable location
 export LOG_FILE="$BASE_DIR/satele.log"
-if [ ! -w "$LOG_FILE" ] && [ ! -w "$BASE_DIR" ]; then
+# Aggressive check: Can we actually write to it?
+if ! touch "$LOG_FILE" 2>/dev/null; then
     export LOG_FILE="/tmp/satele_$(whoami).log"
+    # Try once more to create it if it doesn't exist
+    touch "$LOG_FILE" 2>/dev/null || export LOG_FILE="/tmp/satele_bot.log"
 fi
 
 # Helper function to reliably kill processes

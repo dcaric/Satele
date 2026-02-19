@@ -363,9 +363,14 @@ function status() {
                  local CAUSE=$(pmset -g assertions 2>/dev/null | grep -E "pid [0-9]+\(([^)]+)\):.*(NoIdleSleepAssertion|PreventUserIdleSystemSleep|PreventSystemSleep)" | head -n 1 | sed -E 's/.*pid [0-9]+\(([^)]+)\).*/\1/')
                  AWAKE_MSG="$AWAKE_MSG ($CAUSE)"
             fi
-            # Check for lid-closed suppression (specifically looking for 'sleep 0')
+            # Check for system-wide 'Never Sleep' setting
             if pmset -g custom 2>/dev/null | grep -A 20 "AC Power" | grep -E "^\s*sleep\s+0" > /dev/null; then
-                AWAKE_MSG="$AWAKE_MSG (Lid-Closed Safe)"
+                # Only call it 'Lid-Closed Safe' if it's a MacBook
+                if ioreg -r -d 1 -k AppleRawBattery | grep -q "AppleRawBattery" 2>/dev/null; then
+                    AWAKE_MSG="$AWAKE_MSG (Lid-Closed Safe)"
+                else
+                    AWAKE_MSG="$AWAKE_MSG (Continuous Mode)"
+                fi
             fi
             echo "$AWAKE_MSG"
         else

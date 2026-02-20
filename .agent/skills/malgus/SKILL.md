@@ -11,6 +11,7 @@ This skill allows the Antigravity Agent to delegate tasks or query the Malgus AI
 1. **Chat/Task Delegation**: Send messages or complex instructions to Malgus.
 2. **Autonomous Collaboration**: Malgus can execute coding tasks, manage spreadsheets, and control macOS apps.
 3. **Session Persistence**: Maintains conversation context via session IDs.
+4. **Clear Memory**: Tells Malgus to delete temporary context or session history using the "clear" command.
 
 ## Tools
 The agent should use the following Python script to interact with Malgus:
@@ -18,6 +19,7 @@ The agent should use the following Python script to interact with Malgus:
 
 ### Usage Examples
 - `python3 .agent/skills/malgus/malgus_client.py "Can you check the latest apartment prices in the spreadsheet?"`
+- `python3 .agent/skills/malgus/malgus_client.py "clear"` (Use this when the user asks to "clear memory", "reset Malgus", or "start over with Malgus")
 - `python3 .agent/skills/malgus/malgus_client.py "Run the trading analysis script and report back." "trading_session"`
 
 ## Configuration

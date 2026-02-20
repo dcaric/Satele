@@ -11,16 +11,23 @@ def format_percent(value):
 
 def get_trading_data():
     url = "https://dariocaric.net/tradingpreview/data.json"
+    import ssl
     try:
+        # Try with standard verification first
         with urllib.request.urlopen(url, timeout=10) as response:
             if response.status == 200:
                 return json.loads(response.read().decode('utf-8'))
-            else:
-                print(f"Error: Received status code {response.status}")
-                return None
-    except Exception as e:
-        print(f"Error fetching data: {e}")
-        return None
+    except Exception:
+        # Fallback for systems with missing/outdated SSL certificates (common on Mac)
+        try:
+            context = ssl._create_unverified_context()
+            with urllib.request.urlopen(url, timeout=10, context=context) as response:
+                if response.status == 200:
+                    return json.loads(response.read().decode('utf-8'))
+        except Exception as e:
+            print(f"Error fetching data: {e}")
+            return None
+    return None
 
 def main():
     data = get_trading_data()

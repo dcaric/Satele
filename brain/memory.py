@@ -88,16 +88,6 @@ class Memory:
             # print(f"Query Error: {e}")
             return []
 
-    def clear(self):
-        """Wipes all memory records"""
-        try:
-            self.client.delete_collection(name="satele_logs")
-            self.collection = self.client.get_or_create_collection(name="satele_logs")
-            return True
-        except Exception as e:
-            print(f"Error clearing memory: {e}")
-            return False
-
 if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1 and sys.argv[1] == "status":

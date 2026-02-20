@@ -593,6 +593,31 @@ def monitor_loop():
                                 timeout=5
                             )
                             task_processed = True
+                        elif instruction and re.search(r"(?i)\b(clear memory|reset satele|start over|wipe memory)\b", instruction):
+                            log("🧹 Memory Wipe Triggered.")
+                            # 1. Clear Satele's local memory db
+                            satele_mem_cleared = False
+                            if brain_memory:
+                                satele_mem_cleared = brain_memory.clear()
+                            
+                            # 2. Tell Malgus to clear his context if he exists
+                            malgus_out = ""
+                            malgus_script = os.path.join(PROJECT_ROOT, ".agent", "skills", "malgus", "malgus_client.py")
+                            if os.path.exists(malgus_script):
+                                log("🤖 Clearing Malgus context...")
+                                malgus_out = run_shell(f'python3 "{malgus_script}" "clear"')
+                            
+                            result = "🧹 **System Memory Cleared.**\n"
+                            if satele_mem_cleared: result += "✅ Satele long-term memory wiped.\n"
+                            if malgus_out: result += f"✅ Malgus context: {malgus_out}"
+                            
+                            requests.post(
+                                f"{BASE_URL}/report-result",
+                                json={"id": task_id, "output": result},
+                                headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
+                                timeout=5
+                            )
+                            task_processed = True
                         elif instruction and re.search(r"(?i)(status|alive)", instruction):
                             log("📊 Internal Status Check Triggered.")
                             out = run_shell("./satele status")

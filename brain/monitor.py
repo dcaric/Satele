@@ -93,8 +93,10 @@ def run_shell(cmd):
         elif cmd.strip().startswith("python"):
             cmd = cmd.replace("python", sys.executable, 1)
             
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=180)
         return (result.stdout + result.stderr).strip() or "Success (No output)"
+    except subprocess.TimeoutExpired:
+        return "Error: Command timed out after 180 seconds. The task might be too complex or Malgus is still thinking."
     except Exception as e:
         return f"Execution Error: {str(e)}"
 

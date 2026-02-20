@@ -13,6 +13,10 @@ This skill allows Satele to monitor the trading bot's performance by parsing the
 2. **Performance Summary**: Get a snapshot of ROI, Win Rate, and the latest update time.
 3. **Historical Trend**: View the recent history from the Alpaca Brokerage account.
 
+## Tools
+The agent can use the following script:
+`python3 .agent/skills/trading_monitor/trading_monitor.py`
+
 ## Usage Examples
 
 - "What is my current total equity?"
@@ -20,8 +24,7 @@ This skill allows Satele to monitor the trading bot's performance by parsing the
 - "Show me the trading performance stats."
 - "When was the trading dashboard last updated?"
 
-## Implementation Details
-The skill uses a Python script `trading_monitor.py` which:
-- Fetches the `data.json` via HTTP.
-- Formats the currency and percentages.
-- Displays the data in a clean, readable format for Satele to relay to the user.
+## Example
+If a user says "show trading stats", the agent should:
+1. Run `python3 .agent/skills/trading_monitor/trading_monitor.py`
+2. Reply with the output.

@@ -19,7 +19,7 @@ The agent should use the following Python script to interact with Malgus:
 
 ### Usage Examples
 - `python3 .agent/skills/malgus/malgus_client.py "Can you check the latest apartment prices in the spreadsheet?"`
-- `python3 .agent/skills/malgus/malgus_client.py "clear"` (Use this when the user asks to "clear memory", "reset Malgus", or "start over with Malgus")
+- `python3 .agent/skills/malgus/malgus_client.py "clear"` (CRITICAL: Use ONLY the single word "clear" if the user asks to "clear memory", "reset context", or "start over" with Malgus)
 - `python3 .agent/skills/malgus/malgus_client.py "Run the trading analysis script and report back." "trading_session"`
 
 ## Configuration

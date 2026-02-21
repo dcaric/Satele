@@ -620,6 +620,31 @@ def monitor_loop():
                                 timeout=5
                             )
                             task_processed = True
+                        elif instruction and re.search(r"(?i)send me printout", instruction):
+                            log("📄 Printout request triggered.")
+                            # Clean up the instruction to get the actual command
+                            # Handles "send me printout - satele help", "send me printout satele help", etc.
+                            clean_cmd = re.sub(r"(?i)send me printout\s*([-:]\s*)?", "", instruction).strip()
+                            
+                            if clean_cmd.startswith("satele "):
+                                sub_cmd = clean_cmd[7:].strip()
+                                log(f"🏃 Running Satele sub-command: {sub_cmd}")
+                                out = run_shell(f"./satele {sub_cmd}")
+                                result = f"🧾 **Satele Printout ({sub_cmd}):**\n{out}"
+                            elif clean_cmd:
+                                log(f"🏃 Running Shell command: {clean_cmd}")
+                                out = run_shell(clean_cmd)
+                                result = f"📑 **Shell Printout:**\n{out}"
+                            else:
+                                result = "⚠️ No command specified for printout. Try 'send me printout - satele help'."
+
+                            requests.post(
+                                f"{BASE_URL}/report-result",
+                                json={"id": task_id, "output": result},
+                                headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
+                                timeout=5
+                            )
+                            task_processed = True
                         else:
                             result = process_instruction(instruction, media_path)
                             

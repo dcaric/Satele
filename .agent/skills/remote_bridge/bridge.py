@@ -19,6 +19,16 @@ def execute_agent_task(instruction):
     """
     log(f"🧠 Processing: {instruction}")
     
+    # 0. Handle Printout Requests (Raw Output)
+    if "send me printout" in instruction.lower():
+        import re
+        clean_cmd = re.sub(r"(?i)send me printout\s*([-:]\s*)?", "", instruction).strip()
+        if clean_cmd.startswith("satele "):
+            sub = clean_cmd[7:].strip()
+            return f"🧾 **Satele Printout ({sub}):**\n{run_shell(f'./satele {sub}')}"
+        elif clean_cmd:
+            return f"📑 **Shell Printout:**\n{run_shell(clean_cmd)}"
+
     # 1. Handle Direct Shell Commands
     if instruction.lower().startswith("sh:"):
         cmd = instruction[3:].strip()

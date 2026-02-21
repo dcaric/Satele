@@ -10,9 +10,20 @@ from datetime import datetime
 # Load Config
 def get_config():
     config = {}
-    paths = ["satele.config", "brain/satele.config"]
-    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = current_dir
     
+    # Climb up to find satele.config
+    while project_root != "/":
+        if os.path.exists(os.path.join(project_root, "satele.config")):
+            break
+        project_root = os.path.dirname(project_root)
+    
+    # If not found, use a fallback (4 levels up from current file in .agent/skills/skill_factory/)
+    if project_root == "/":
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+    paths = ["satele.config", "brain/satele.config"]
     for p in paths:
         full_p = os.path.join(project_root, p)
         if os.path.exists(full_p):

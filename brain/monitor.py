@@ -495,18 +495,22 @@ def process_instruction(instruction, media_path=None):
                 log(f"➡️ Running: {cmd}")
                 out = run_shell(cmd)
                 
-                # Check for UPLOAD in output
-                target_upload_path = None
-                for line in out.split("\n"):
+                # Filter UPLOAD lines from 'out' to prevent invalid ones from leaking through
+                lines = out.split("\n")
+                clean_lines = []
+                for line in lines:
                     if line.strip().startswith("UPLOAD:"):
                         potential_path = line.strip().split(":", 1)[1].strip()
-                        if os.path.isdir(potential_path):
-                            full_output.append(f"⚠️ Warning: '{potential_path}' is a directory. Satele can only upload individual files.")
-                        elif os.path.isfile(potential_path):
+                        if os.path.isfile(potential_path):
                             return f"UPLOAD: {potential_path}"
                         else:
-                            full_output.append(f"⚠️ Warning: Could not find file to upload at '{potential_path}'.")
-                        break
+                            # Log warning but skip adding the line
+                            msg = f"⚠️ Satele skipped upload of '{potential_path}' (not a file)."
+                            log(msg)
+                            clean_lines.append(msg)
+                    else:
+                        clean_lines.append(line)
+                out = "\n".join(clean_lines)
             
             full_output.append(out)
             

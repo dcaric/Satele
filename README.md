@@ -398,12 +398,28 @@ Satele is designed for long-term remote operation. You can update her code or re
 > *Updating and restarting:*
 > ![Restart Example](images_examples/gitpull2.jpeg)
 
-### What makes Satele special?
-Unlike a standard SSH client (which is painful on mobile):
-*   **Context Aware:** She knows you are in Docker but want Windows files (`/host_home`).
-*   **Persistent:** She remembers you were in `~/Working/ml` yesterday.
-
-### 🚀 Advanced Automation: GUI Scripting
+---
+ 
+ ## 🏗️ Autonomous Evolution: The Skill Factory
+ 
+ Satele is one of the first AI assistants capable of **self-evolution**. She doesn't just use predefined skills; she can design, test, and install her own new capabilities based on your natural language instructions.
+ 
+ ### 🔄 The Evolution Loop:
+ 1.  **AI Design:** When you ask for a new skill, Satele uses Gemini to architect the Python logic (`.py`) and write the necessary system documentation (`SKILL.md`).
+ 2.  **Sandbox Testing:** Satele creates an isolated "sandbox" environment, installs its dependencies, and runs the code. If it crashes, she reads the error and fixes the code automatically.
+ 3.  **Automatic Deployment:** Once the test passes, Satele moves the files into the production `.agent/skills/` folder.
+ 4.  **Auto-indexing:** Satele restarts her core monitor, triggering the **Skill Indexer** to recognize the new power and make it available for use immediately.
+ 
+ ### 🚀 Examples of Evolution:
+ *   *"M1, design a new skill that calculates compound interest of a given amount."*
+ *   *"M1, create a skill that checks the price of Bitcoin and sends it as a summary."*
+ *   *"M1, I need a skill that can summarize any PDF file in my Downloads."*
+ 
+ After Satele finishes her design, she will reply: *"The new skill 'Bitcoin Tracker' is now live! Try asking: 'What is the price of BTC?'"*
+ 
+ ---
+ 
+ ## 🚀 Advanced Automation: GUI Scripting
 Satele can be "upgraded" beyond simple shell commands by chaining system tools like **AppleScript** (macOS) or **Display** tools. Here is a practical example of automating a calculator and getting visual feedback:
 
 **Command:**

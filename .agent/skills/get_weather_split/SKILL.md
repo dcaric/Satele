@@ -1,11 +1,11 @@
 ---
 name: Weather in Split
-description: Fetches current weather for Split, Croatia (Temperature, Wind, Condition).
+description: Fetches current weather and 5-day forecast for Split, Croatia.
 ---
 
 # Weather in Split Skill
 
-This skill allows Satele to report live weather data for Split.
+This skill allows Satele to report live weather data and a 5-day forecast for Split.
 
 ## Tools
 The agent can use this script:
@@ -13,5 +13,6 @@ The agent can use this script:
 
 ## Usage Examples
 - "What is the weather in Split?"
-- "How hot is it in Split, Croatia?"
+- "Show me the 5-day forecast for Split."
+- "What is the weather forecast for Split next week?"
 - "Check the wind speed in Split for me."

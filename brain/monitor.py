@@ -216,12 +216,14 @@ def ai_interpret(instruction, media_path=None):
     2. USE ABSOLUTE PATHS for all scripts and tools mentioned in "AVAILABLE SKILLS".
     3. YOUR CURRENT LOCATION (CWD): {os.getcwd()}
     4. PRESERVE PATH CASE EXACTLY.
-    5. UTILITY COMMANDS: 
+    5. FOCUS ON RELEVANCE: Generate commands ONLY for the current instruction. Do NOT include other skills (like trading monitor or status checks) unless explicitly asked in the instruction.
+    6. IGNORE IRRELEVANT LOGS: If "Previous Relevant Context" contains unrelated tasks (like trading), ignore them. Only use context that helps fulfill the CURRENT instruction.
+    7. UTILITY COMMANDS: 
        - If asked for "current path" or "where am I", use `pwd`.
        - If asked for "time", use `date`.
        - If asked for "who am I", use `whoami`.
        - For general questions about your status, name, or what you are doing, use an `echo` command with a helpful, personable response. Your name is {os.getenv('BOT_TRIGGER', 'Satele').capitalize()}. (Example: `echo "Hello! I am {os.getenv('BOT_TRIGGER', 'Satele').capitalize()}, your AI assistant. I'm currently monitoring your system and ready to help!"`).
-    6. SKILLS TAKE PRECEDENCE: If a command is listed in "AVAILABLE SKILLS" that matches the user's intent, YOU MUST USE THAT EXACT COMMAND WITH ALL PROVIDED ARGUMENTS/PATHS.
+    8. SKILLS TAKE PRECEDENCE: If a command is listed in "AVAILABLE SKILLS" that matches the user's intent, YOU MUST USE THAT EXACT COMMAND WITH ALL PROVIDED ARGUMENTS/PATHS.
     7. NO HALLUCINATION: If the user asks for Gmail and the command provided is `python3 .../gmail_tool.py`, DO NOT output `gmail_tool.py` or `Gmail Search`.
     8. RESULTS AS COMMANDS: If the user asks to "Summarize", "Analyze", or asks for **specific details/info/numbers** from a source (like an email), use the command that fetches the FULL content (e.g., `python3 .../gmail_tool.py fetch_full ...`).
     9. NO PLACEHOLDERS: NEVER use generic or placeholder emails like 'your-email@gmail.com' in Gmail commands. If the user didn't specify a sender, OMIT the "sender" field entirely.

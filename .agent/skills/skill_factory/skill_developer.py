@@ -11,7 +11,7 @@ from datetime import datetime
 def get_config():
     config = {}
     paths = ["satele.config", "brain/satele.config"]
-    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     
     for p in paths:
         full_p = os.path.join(project_root, p)

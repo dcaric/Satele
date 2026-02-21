@@ -232,6 +232,8 @@ def ai_interpret(instruction, media_path=None):
     CRITICAL FILE HANDLING RULES:
     - If saving a file: `mv {media_path} <destination>`
     - To send a file: `UPLOAD:<filename>`
+    - NEVER use `UPLOAD:` on a directory (like `UPLOAD:.` or `UPLOAD:/path/to/folder`). It MUST be a single file.
+    - If a user asks to "send/summarize" something that a SKILL already handles, DO NOT add extra `UPLOAD:` commands. Trust the skill script to produce the correct output.
     - To find latest file: `echo "UPLOAD:$(find . -maxdepth 1 -type f -not -path '*/.*' -exec stat -f "%m %N" {{}} + | sort -rn | head -1 | cut -d' ' -f2- | xargs realpath)"`
     {context_str}
     """
@@ -495,11 +497,16 @@ def process_instruction(instruction, media_path=None):
                 
                 # Check for UPLOAD in output
                 target_upload_path = None
-                for line in out.splitlines():
+                for line in out.split("\n"):
                     if line.strip().startswith("UPLOAD:"):
-                        target_upload_path = line.strip().split(":", 1)[1].strip()
+                        potential_path = line.strip().split(":", 1)[1].strip()
+                        if os.path.isdir(potential_path):
+                            full_output.append(f"⚠️ Warning: '{potential_path}' is a directory. Satele can only upload individual files.")
+                        elif os.path.isfile(potential_path):
+                            return f"UPLOAD: {potential_path}"
+                        else:
+                            full_output.append(f"⚠️ Warning: Could not find file to upload at '{potential_path}'.")
                         break
-                if target_upload_path: return f"UPLOAD: {target_upload_path}"
             
             full_output.append(out)
             

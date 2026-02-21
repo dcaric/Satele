@@ -25,3 +25,6 @@ If a user says "list files in media", the agent should:
 
 If a user says "send me the latest report", the agent should:
 1. Run `echo "UPLOAD:$(ls -t latest_report*.pdf 2>/dev/null | head -1 | xargs realpath)"`
+
+## Usage Examples
+- "Check current weather"

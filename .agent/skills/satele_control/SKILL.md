@@ -22,3 +22,7 @@ The agent should use the following Python script to interact with the bridge:
 
 ## Workflow Integration
 This skill is designed to be used within the `/satele` workflow.
+
+## Usage Examples
+- "Check inbox"
+- "Reply to task"

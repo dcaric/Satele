@@ -19,3 +19,8 @@ Use these commands to manage the Satele environment itself.
 - Use `gitpull` when the user asks to "update", "pull latest", or "update code".
 - Use `restart` when the user asks to "restart", "reboot", or after you have modified a configuration file like `satele.config`.
 - Use `status` to diagnose connection issues.
+
+## Usage Examples
+- "satele restart"
+- "satele gitpull"
+- "satele status"

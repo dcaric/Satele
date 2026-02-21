@@ -435,6 +435,16 @@ def agentic_mode(instruction, task_id=None):
     history = []
     current_attempt = 1
     
+    # Context Retrieval for Agentic Mode
+    context_str = ""
+    if brain_memory:
+        try:
+            hits = brain_memory.recall(instruction, n_results=3)
+            if hits:
+                context_str = "\n\n🧠 Previous Relevant Context:\n" + "\n".join(hits)
+        except Exception as e:
+            log(f"Context error: {e}")
+
     system_prompt = f"""
     You are in Satele AGENTIC INVESTIGATION MODE. Your goal is to solve a complex system task by writing and running Python scripts.
     
@@ -460,6 +470,7 @@ def agentic_mode(instruction, task_id=None):
     7. Each response must contain exactly one action. Provide reasoning, then THE CODE in a ```python ... ``` block.
     
     USER TASK: {instruction}
+    {context_str}
     """
     
     while time.time() - start_time < max_duration:

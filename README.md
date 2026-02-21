@@ -188,6 +188,7 @@ Scan the QR code with WhatsApp (Linked Devices).
 | `satele stop` | Stops all services. |
 | `satele restart` | Gracefully restarts all services. |
 | `satele status` | Shows health, active AI model, and token usage cost. |
+| `satele skills` | Lists all registered skills and usage examples. |
 | `satele gitpull` | Pulls the latest code from GitHub. |
 | `satele name <name>` | Sets a custom wake-word (e.g. `satele name M1`). |
 | `satele setup-sudo` | Configures passwordless `sudo` for Satele. |
@@ -222,6 +223,7 @@ Commands:
   setup-sudo          Enable passwordless sudo (Optional, use with caution)
   install             Install the connection skill globally (for IDE)
   link                Enable remote control in the current project
+  skills              List all registered skills with usage examples
   help                Show this message
 
 Logs: tail -f /tmp/satele_dcaric.log
@@ -407,8 +409,19 @@ Satele is designed for long-term remote operation. You can update her code or re
  ### 🔄 The Evolution Loop:
  1.  **AI Design:** When you ask for a new skill, Satele uses Gemini to architect the Python logic (`.py`) and write the necessary system documentation (`SKILL.md`).
  2.  **Sandbox Testing:** Satele creates an isolated "sandbox" environment, installs its dependencies, and runs the code. If it crashes, she reads the error and fixes the code automatically.
- 3.  **Automatic Deployment:** Once the test passes, Satele moves the files into the production `.agent/skills/` folder.
- 4.  **Auto-indexing:** Satele restarts her core monitor, triggering the **Skill Indexer** to recognize the new power and make it available for use immediately.
+ 3.  **Safety & Performance Rules:**
+     *   **Native-First:** To avoid dependency hell, she prefers standard libraries (`urllib`, `json`, `random`).
+     *   **Keyless Execution:** She is forbidden from creating skills that require paid API keys or registration.
+     *   **SSL Awareness:** She handles Mac-specific SSL certificate issues automatically.
+ 4.  **Automatic Deployment:** Once the test passes, Satele moves the files into the production `.agent/skills/` folder.
+ 5.  **Auto-indexing:** Satele restarts her core monitor, triggering the **Skill Indexer** to recognize the new power and make it available for use immediately.
+ 
+ ### 🔍 Exploring Capabilities:
+ View all your current powers by running:
+ ```bash
+ satele skills
+ ```
+ This will list every skill, its description, and real-world examples of how to trigger it from your phone.
  
  ### 🚀 Examples of Evolution:
  *   *"M1, design a new skill that calculates compound interest of a given amount."*

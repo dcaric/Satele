@@ -358,7 +358,7 @@ BOT_TRIGGER=m1                  # Wake-word for WhatsApp
 
 **Switching Providers:**
 ```bash
-# Edit brain/satele_brain.env
+# Edit satele.config
 AI_PROVIDER=gemini  # or "ollama"
 ```
 

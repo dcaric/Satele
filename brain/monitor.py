@@ -118,6 +118,40 @@ def run_shell(cmd):
     except Exception as e:
         return f"Execution Error: {str(e)}"
 
+def track_usage(response):
+    """
+    [v2.3] Centralized token usage tracking for Gemini responses.
+    """
+    try:
+        if not response or not hasattr(response, 'usage_metadata'):
+            return
+            
+        usage = response.usage_metadata
+        if usage:
+            t_in = usage.prompt_token_count
+            t_out = usage.candidates_token_count
+            t_total = usage.total_token_count
+            
+            # Use absolute path for token_usage.json to ensure consistency
+            usage_file = os.path.join(PROJECT_ROOT, "token_usage.json")
+            data = {"total": 0, "in": 0, "out": 0}
+            
+            if os.path.exists(usage_file):
+                with open(usage_file, "r") as f:
+                    try: 
+                        data = json.load(f)
+                    except: 
+                        pass
+            
+            data["total"] += t_total
+            data["in"] += t_in
+            data["out"] += t_out
+            
+            with open(usage_file, "w") as f:
+                json.dump(data, f)
+    except Exception as e:
+        log(f"Token tracking error: {e}")
+
 def get_skills_context(instruction=None):
     # Temporarily bypass indexer due to slow model download
     return get_skills_context_legacy()
@@ -326,29 +360,7 @@ def ai_interpret(instruction, media_path=None):
             )
             
             # 📊 Token Tracking
-            try:
-                usage = response.usage_metadata
-                if usage:
-                    t_in = usage.prompt_token_count
-                    t_out = usage.candidates_token_count
-                    t_total = usage.total_token_count
-                    
-                    usage_file = "token_usage.json"
-                    data = {"total": 0, "in": 0, "out": 0}
-                    
-                    if os.path.exists(usage_file):
-                        with open(usage_file, "r") as f:
-                            try: data = json.load(f)
-                            except: pass
-                    
-                    data["total"] += t_total
-                    data["in"] += t_in
-                    data["out"] += t_out
-                    
-                    with open(usage_file, "w") as f:
-                        json.dump(data, f)
-            except Exception as e:
-                log(f"Token tracking error: {e}")
+            track_usage(response)
 
             text_response = response.text.replace('`', '').strip()
         except Exception as e:
@@ -486,6 +498,7 @@ def agentic_mode(instruction, task_id=None):
                 model=gemini_model_name,
                 contents=full_prompt
             )
+            track_usage(response)
             ai_text = response.text.strip()
             
             if "FINAL:" in ai_text:
@@ -583,6 +596,7 @@ def ai_reason(instruction, tool_output):
                 model=gemini_model_name,
                 contents=extraction_prompt
             )
+            track_usage(response)
             res_text = response.text.strip()
 
         # Final Guard: If the AI was still too chatty, force it down

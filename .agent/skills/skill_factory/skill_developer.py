@@ -150,6 +150,11 @@ def main():
 
         # 3. Deploy
         prod_skills_dir = os.path.join(project_root, ".agent", "skills", folder_name)
+        if os.path.exists(prod_skills_dir):
+            log(f"⚠️ Skill '{folder_name}' already exists. Aborting deployment to prevent overwrite.")
+            print(f"❌ **Skill Design Canceled:** A skill named '{folder_name}' already exists. Please choose a different name or ask to 'Update' specifically (Update logic coming soon).")
+            return
+
         os.makedirs(prod_skills_dir, exist_ok=True)
         
         # Update SKILL.md with absolute paths before writing

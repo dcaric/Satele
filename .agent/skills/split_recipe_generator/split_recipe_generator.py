@@ -2,6 +2,7 @@ import json
 import random
 
 def generate_split_recipe():
+    # A list of authentic Mediterranean / Split, Croatia ingredients
     ingredients = [
         {"name": "Olive Oil", "type": "staple"},
         {"name": "Garlic", "type": "staple"},
@@ -25,35 +26,38 @@ def generate_split_recipe():
         {"name": "Potatoes", "type": "vegetable"}
     ]
 
-    num_ingredients = random.randint(3, 6) #3-6 ingredients
+    # Select 3-6 random ingredients for a realistic dish
+    num_ingredients = random.randint(3, 6)
     selected_ingredients = random.sample(ingredients, num_ingredients)
 
-    recipe_name_parts = [ing['name'].split(' ')[0] for ing in selected_ingredients[:3]]  # First 3 ingredients
+    # Generate a name based on the first few ingredients
+    recipe_name_parts = [ing['name'].split(' ')[0] for ing in selected_ingredients[:3]]
     recipe_name = 'Split-Style ' + ' and '.join(recipe_name_parts) + ' Dish'
 
-    instructions = [
-        f"Prepare the {', '.join([ing['name'] for ing in selected_ingredients if ing['type'] in ['vegetable', 'protein']])}.",
-        f"Sauté the {', '.join([ing['name'] for ing in selected_ingredients if ing['type'] == 'vegetable'])} with garlic and olive oil.",
-        f"Add the {', '.join([ing['name'] for ing in selected_ingredients if ing['type'] == 'protein'])} and cook until done.",
-        f"Deglaze with a splash of {', '.join([ing['name'] for ing in selected_ingredients if ing['type'] == 'beverage'])} (if included).",
-        f"Season with salt, pepper, and {', '.join([ing['name'] for ing in selected_ingredients if ing['type'] == 'herb'])}.",
-        f"Serve with {', '.join([ing['name'] for ing in selected_ingredients if ing['type'] in ['grain', 'dairy']])} and a squeeze of {', '.join([ing['name'] for ing in selected_ingredients if ing['type'] == 'fruit'])}."
-    ]
+    # Build logical instructions based on chosen ingredients
+    raw_instructions = []
+    veg = [ing['name'] for ing in selected_ingredients if ing['type'] == 'vegetable']
+    prot = [ing['name'] for ing in selected_ingredients if ing['type'] == 'protein']
+    herbs = [ing['name'] for ing in selected_ingredients if ing['type'] == 'herb']
+    dairy = [ing['name'] for ing in selected_ingredients if ing['type'] in ['dairy', 'grain']]
+    fruit = [ing['name'] for ing in selected_ingredients if ing['type'] == 'fruit']
 
-    random.shuffle(instructions)
-    instructions = [s for s in instructions if not s.startswith('Serve with Serve with')]
+    if veg or prot: raw_instructions.append(f"Chop the {', '.join(veg + prot)} into bite-sized pieces.")
+    raw_instructions.append("Heat a generous splash of Olive Oil in a pan with crushed Garlic.")
+    if veg: raw_instructions.append(f"Sauté the {', '.join(veg)} until softened.")
+    if prot: raw_instructions.append(f"Add the {', '.join(prot)} and cook until tender and golden.")
+    if herbs: raw_instructions.append(f"Stir in the fresh {', '.join(herbs)} and season with salt and pepper.")
+    if dairy or fruit: raw_instructions.append(f"Finish with {', '.join(dairy)} and a squeeze of {', '.join(fruit)}.")
 
-    recipe = {
-        "name": recipe_name,
-        "ingredients": [ing['name'] for ing in selected_ingredients],
-        "instructions": instructions
-    }
-
-    recipe_summary = f"## {recipe['name']}\n\n**Ingredients:**\n{chr(10).join([f'- {ing}' for ing in recipe['ingredients']])}\n\n**Instructions:**\n{chr(10).join([f'{i+1}. {step}' for i, step in enumerate(recipe['instructions'])])}"
+    recipe_summary = f"👨‍🍳 *{recipe_name}* 👨‍🍳\n"
+    recipe_summary += f"--------------------------\n"
+    recipe_summary += f"🛒 *Ingredients:* {', '.join([i['name'] for i in selected_ingredients])}\n\n"
+    recipe_summary += f"📑 *Instructions:*\n"
+    for i, step in enumerate(raw_instructions, 1):
+        recipe_summary += f"{i}. {step}\n"
+    recipe_summary += f"--------------------------"
 
     return recipe_summary
 
-
 if __name__ == '__main__':
-    recipe = generate_split_recipe()
-    print(recipe)
+    print(generate_split_recipe())

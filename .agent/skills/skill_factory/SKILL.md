@@ -17,10 +17,11 @@ This is Satele's "Evolution Engine". It allows Satele to create her own new capa
 The agent can use the following script:
 `python3 .agent/skills/skill_factory/skill_developer.py "[skill_description]"`
 
-## Usage Examples
-- "Design a new skill to check the price of Bitcoin every hour."
-- "Create a skill that scans my local network and reports active devices."
-- "I need a skill that can summarize the last 5 emails from my boss."
+## Usage Examples (CRITICAL: Only trigger when a NEW skill is requested)
+- "Design a new skill to..."
+- "Create a new capability for..."
+- "Build a skill that..."
+- "I need a NEW skill that..."
 
 ## Process Flow
 1. Satele receives a design request.

@@ -1,11 +1,17 @@
+---
+name: Split Recipe Generator
+description: A skill that generates a recipe based on common local Split ingredients, formatted as a beautiful summary.
+---
+
 # Split Recipe Generator
 
-## Description
-This skill generates a recipe based on common local Split ingredients, formatted as a beautiful summary.  The recipe includes a name, list of ingredients, and cooking instructions, all tailored to the flavors of the Split region.
-
-## Usage
-Simply invoke the skill.  It will return a full recipe summary as markdown, ready to be displayed.
+This skill uses Satele's internal knowledge to craft an authentic Mediterranean dish based on the ingredients available in Split, Croatia.
 
 ## Tools
-- `random`: For selecting random ingredients and shuffling instructions.
-- `json`: For creating recipe in JSON format.
+The agent can use this script:
+`python3 .agent/skills/split_recipe_generator/split_recipe_generator.py`
+
+## Usage Examples
+- "Give me a Split recipe"
+- "How do they cook in Split?"
+- "Recipe for dinner tonight (local style)"

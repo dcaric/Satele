@@ -19,13 +19,18 @@ except ImportError:
 def log(msg):
     print(f"[Monitor] {msg}", flush=True)
 
-import google.generativeai as genai
+import google.generativeai as genai_legacy # For backward compat or type checking if needed
+from google import genai
 import re
 from dotenv import load_dotenv
 
 
 # Determine and store the project root
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Add local lib to path for google-genai
+lib_path = os.path.join(PROJECT_ROOT, "lib")
+if os.path.exists(lib_path) and lib_path not in sys.path:
+    sys.path.append(lib_path)
 
 # Load environment variables from consolidated satele.config
 # Prioritize local brain copy to bypass root permission issues
@@ -68,14 +73,20 @@ except (ValueError, TypeError):
 if POLL_INTERVAL < 0.5: POLL_INTERVAL = 0.5 # Safety minimum
 
 # Initialize Gemini if key is available
+client = None
+gemini_model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+
 if GOOGLE_API_KEY:
-    genai.configure(api_key=GOOGLE_API_KEY)
-    gemini_model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
-    model = genai.GenerativeModel(gemini_model_name)
-    log(f"🧠 Using Gemini Model: {gemini_model_name}")
-    log_brain = "🧠 AI Brain (Gemini) Active"
+    try:
+        client = genai.Client(api_key=GOOGLE_API_KEY)
+        log(f"🧠 Using Gemini Model (genai SDK): {gemini_model_name}")
+        log_brain = "🧠 AI Brain (Gemini v2) Active"
+    except Exception as e:
+        log(f"❌ Failed to init google-genai Client: {e}")
+        client = None
+        log_brain = "⚠️ Gemini SDK Init Failed"
 else:
-    model = None
+    client = None
     log_brain = "⚠️ No GOOGLE_API_KEY found. Falling back to simple shell mapping."
 
 log(f"🌍 Startup Environment: Provider={os.getenv('AI_PROVIDER')} | Bot={os.getenv('BOT_TRIGGER')}")
@@ -252,9 +263,9 @@ def ai_interpret(instruction, media_path=None):
         log(f"📂 Processing Media: {media_path}")
 
         try:
-            if model and (is_audio or is_visual):
+            if client and (is_audio or is_visual):
                 # Upload to Gemini so it has visual/audio context
-                media_file = genai.upload_file(path=media_path)
+                media_file = client.files.upload(path=media_path)
                 content_parts.append(media_file)
         except Exception as e:
             log(f"Media upload error: {e}")
@@ -299,15 +310,13 @@ def ai_interpret(instruction, media_path=None):
             provider = "gemini" 
     
     if provider == "gemini" or not text_response: # Fallback or direct Gemini
-        if not model:
-            # simple fallback if gemini not configured
-            if "disk" in instruction.lower(): return ["df -h"]
-            return None
-            
         try:
             # Send everything to Gemini
             total_prompt = [prompt_text] + content_parts
-            response = model.generate_content(total_prompt)
+            response = client.models.generate_content(
+                model=gemini_model_name,
+                contents=total_prompt
+            )
             
             # 📊 Token Tracking
             try:
@@ -412,9 +421,12 @@ def ai_reason(instruction, tool_output):
             resp = requests.post("http://localhost:11434/api/generate", json=payload, timeout=60)
             res_text = resp.json().get("response", "Error").strip()
         else:
-            if not GOOGLE_API_KEY:
+            if not client:
                 return f"⚠️ Analysis requires key. Raw:\n{tool_output}"
-            response = model.generate_content(extraction_prompt)
+            response = client.models.generate_content(
+                model=gemini_model_name,
+                contents=extraction_prompt
+            )
             res_text = response.text.strip()
 
         # Final Guard: If the AI was still too chatty, force it down

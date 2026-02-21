@@ -6,6 +6,8 @@ import subprocess
 import shutil
 import tempfile
 from datetime import datetime
+import google.generativeai as genai_legacy # For fallback
+from google import genai
 
 # Load Config
 def get_config():
@@ -34,15 +36,19 @@ def get_config():
                             k, v = line.strip().split("=", 1)
                             config[k] = v
             except: pass
+    
+    # Add local lib to path for google-genai
+    lib_path = os.path.join(project_root, "lib")
+    if os.path.exists(lib_path) and lib_path not in sys.path:
+        sys.path.append(lib_path)
+        
     return config, project_root
 
 def log(msg):
     print(f"🏗️ [Skill Factory] {msg}", flush=True)
 
 def generate_skill_content(description, api_key, model_name):
-    import google.generativeai as genai
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(model_name)
+    client = genai.Client(api_key=api_key)
     
     prompt = f"""
     You are Satele's Brain. You are designing a NEW skill for yourself.
@@ -69,7 +75,10 @@ def generate_skill_content(description, api_key, model_name):
     }
     """
     
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(
+        model=model_name,
+        contents=prompt
+    )
     text = response.text
     
     # Extract JSON with improved robustness

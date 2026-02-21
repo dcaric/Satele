@@ -441,31 +441,31 @@ def agentic_mode(instruction, task_id=None):
     SYSTEM CONTEXT:
     - Host OS: {platform.system()} ({platform.release()})
     - Architecture: {platform.machine()}
-    - Shell: {os.environ.get('SHELL', 'unknown')}
     
     SANDBOX RULES:
     1. Workspace: {working_dir}
     2. Isolated Venv Python Binary: {python_bin}
     3. You can install missing packages using `{pip_bin} install package_name` via subprocess if needed.
-    4. macOS NETWORKING (CRITICAL): 
-       - DO NOT USE `ip route` or `ip addr` (Linux only). 
-       - USE `arp -an` to see the ARP cache (instantaneous).
-       - USE `ifconfig` or `networksetup -listallhardwareports` to find interfaces.
-       - USE `netstat -rn` to find the default gateway.
-    5. PERFORMANCE: 
-       - Avoid sequential pings across large subnets (to prevent timeouts). 
-       - If you MUST scan a subnet, use `arp -an` first, OR use a small range, OR use concurrent.futures for parallel pings.
-    6. Each response must contain exactly one action.
-    7. Code Format: Provide reasoning, then THE CODE in a ```python ... ``` block.
-    8. Timeout: Each script has a 35s limit. Total sandbox time is 110s.
+    4. PLATFORM-AWARE NETWORKING: 
+       - Use tools compatible with the detected Host OS.
+       - LINUX: `ip route`, `ip addr`, `arp -n`.
+       - macOS: `arp -an`, `ifconfig`, `netstat -rn`.
+       - WINDOWS: `arp -a`, `ipconfig`, `route print`.
+    5. PERFORMANCE & TIMEOUTS: 
+       - Be extremely efficient. Each script has a 35s limit. 
+       - DO NOT scan entire /24 subnets via sequential pings; it will timeout. 
+       - HINT: The ARP cache (`arp`) is usually the fastest way to find active local devices and is often sufficient.
+    6. CONCLUSION:
+       - As soon as you have the answer, respond with "FINAL:" followed by a concise summary.
+    7. Each response must contain exactly one action. Provide reasoning, then THE CODE in a ```python ... ``` block.
     
     USER TASK: {instruction}
     """
     
     while time.time() - start_time < max_duration:
         context = ""
-        # Keep only last few steps to save tokens/focus
-        for h in history[-3:]:
+        # Keep more history to prevent "forgetting" success in earlier steps
+        for h in history[-6:]:
             context += f"\n--- Attempt {h['step']} ---\nAction: {h['action']}\nResult: {h['result']}\n"
         
         full_prompt = f"{system_prompt}\n\n{context}\n\nDecision Time (Attempt {current_attempt}):"

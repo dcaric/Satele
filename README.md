@@ -1,6 +1,6 @@
-# 🪐 Satele: AI-Powered Remote OS Orchestrator
+# 🪐 Satele: AI-Powered Self-Evolving OS Orchestrator
 
-Satele is an advanced, multimodal bridge that connects your **WhatsApp** to your **Server/Desktop Environment**. It allows you to control your machine via text or voice commands using AI (Gemini or Ollama).
+Satele is an advanced, multimodal bridge that connects your **WhatsApp** to your **Server/Desktop Environment**. It allows you to control your machine and **autonomously expand its own capabilities** by building new skills via text or voice commands using AI (Gemini or Ollama).
 
 <div align="center">
   <a href="https://youtube.com/shorts/YO_bjmIKPCQ">

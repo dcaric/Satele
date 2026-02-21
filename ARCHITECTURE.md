@@ -324,28 +324,24 @@ When a script outputs `UPLOAD:/path/to/file`:
 
 ## Configuration
 
-### Environment Variables
+### Centralized Configuration (`satele.config`)
 
-**Brain Configuration (`brain/satele_brain.env`):**
+Satele uses a single, consolidated configuration file in the project root to manage all components.
+
+**Key Settings:**
 ```bash
-# AI Provider
-AI_PROVIDER=ollama              # or "gemini"
-OLLAMA_MODEL=satele-m3          # if using Ollama
-GEMINI_MODEL=gemini-2.0-flash   # if using Gemini
-GOOGLE_API_KEY=your_key_here    # for Gemini
+# AI Configuration
+GOOGLE_API_KEY=your_key_here    # required for Gemini
+AI_PROVIDER=gemini              # "gemini" or "ollama"
+GEMINI_MODEL=gemini-2.0-flash   # default model
+OLLAMA_MODEL=satele-m1          # if using local AI
 
-# Bridge Connection
+# Bridge Connectivity
 REMOTE_BRIDGE_URL=http://localhost:8000
 BRIDGE_SECRET_KEY=default-secret-key
 
-# Bot Trigger
-BOT_TRIGGER=m3                  # WhatsApp trigger word
-```
-
-**Server Configuration (`server/.env`):**
-```bash
-BRIDGE_SECRET_KEY=default-secret-key
-PORT=8000
+# Persona
+BOT_TRIGGER=m1                  # Wake-word for WhatsApp
 ```
 
 ### AI Provider Selection
@@ -473,7 +469,7 @@ python3 .agent/skills/speedtest/speedtest_capture.py
 - No sudo/root access by default
 
 ### API Keys
-- Store in `.env` files (gitignored)
+- Store in `satele.config` (gitignored)
 - Never commit keys to repository
 - Use environment variables in production
 

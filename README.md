@@ -426,9 +426,13 @@ Satele is designed for long-term remote operation. You can update her code or re
  ### 🚀 Examples of Evolution:
  *   *"M1, design a new skill that calculates compound interest of a given amount."*
  *   *"M1, create a skill that checks the price of Bitcoin and sends it as a summary."*
- *   *"M1, I need a skill that can summarize any PDF file in my Downloads."*
- 
- After Satele finishes her design, she will reply: *"The new skill 'Bitcoin Tracker' is now live! Try asking: 'What is the price of BTC?'"*
+  *   *"M1, I need a skill that can summarize any PDF file in my Downloads."*
+  
+  > *Satele designing and deploying a new skill autonomously:*
+  > ![Designing a New Skill](images_examples/build_skill_1.jpg)
+  > ![Deploying a New Skill](images_examples/build_skill_2.jpg)
+  
+  After Satele finishes her design, she will reply: *"The new skill 'Bitcoin Tracker' is now live! Try asking: 'What is the price of BTC?'"*
  
  ---
  

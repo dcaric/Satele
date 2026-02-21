@@ -431,7 +431,7 @@ Satele is designed for long-term remote operation. You can update her code or re
   > *Satele designing and deploying a new skill autonomously:*
   > ![Designing a New Skill](images_examples/build_skill_1.jpg)
   > ![Deploying a New Skill](images_examples/build_skill_2.jpg)
-  > ![Deploying a New Skill](images_examples/build_skill_3.jpg)
+  > ![Deploying a New Skill](images_examples/build_skill_31.jpg)
 
   After Satele finishes her design, she will reply: *"The new skill 'Bitcoin Tracker' is now live! Try asking: 'What is the price of BTC?'"*
  

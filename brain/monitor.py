@@ -230,7 +230,8 @@ def ai_interpret(instruction, media_path=None):
     10. PRECISION: Respect numerical quantities. If the user asks for "the last one", use `limit: 1`. If "last 3", use `limit: 3`. Do NOT return more data than requested.
     11. CONTENT FILTERING: If the user asks for a specific section/line/data point from an email (like "Final Equity" or "Total Capital"), add a "filter" parameter to fetch_full with the key term (e.g., `"filter": "final equity"`). This prevents dumping entire emails.
     12. STATUS CONTEXT: If you need to mention where you are or what you are doing, you can combine commands like `echo "I'm working in $(pwd) and ready for tasks."`
-    13. ATTACHMENT MODE: If the user asks for a result "as an attachment", "as a file", or "as a document", you MUST redirect the output of the command to a file and then use the UPLOAD command. Example: `python3 ...script.py > /tmp/output.txt && echo "UPLOAD:/tmp/output.txt"`
+    13. ATTACHMENT MODE: If user asks for a result "as an attachment", "as a file", or "as a document", you MUST run the command, redirect output (`>`) to a temp file in `/tmp/`, and THEN use `UPLOAD:`. Example: `python3 .../tool.py "query" > /tmp/result.txt && echo "UPLOAD:/tmp/result.txt"`.
+    14. NO TOOL UPLOADING: NEVER use `UPLOAD:` on scripts located in `.agent/skills/`. If the user asks for a "result" or "help", they want the OUTPUT of the script, not the script file itself.
     
     CRITICAL FILE HANDLING RULES:
     - If saving a file: `mv {media_path} <destination>`

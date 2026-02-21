@@ -48,10 +48,18 @@ async def handle_incoming_message(payload: dict):
     if not message_text and not media_path:
         return {"status": "ignored", "reason": "no text or media"}
     
+    trigger = os.getenv("BOT_TRIGGER", "satele").lower()
+    
+    # Clean text for trigger detection
+    instruction_clean = message_text.strip() if message_text else ""
+    if instruction_clean.lower().startswith(trigger):
+        # Strip trigger + optional space/colon/dash
+        instruction_clean = re.sub(f"^{trigger}\\s*[-:]?\\s*", "", instruction_clean, flags=re.IGNORECASE).strip()
+
     # --- EMERGENCY RESPONDER (Direct shell execution even if Monitor is dead) ---
-    if message_text and message_text.lower().startswith("sh:"):
-        print(f"🚨 Emergency command received: {message_text}")
-        cmd = message_text[3:].strip()
+    if instruction_clean.lower().startswith("sh:"):
+        print(f"🚨 Emergency command detected: {instruction_clean}")
+        cmd = instruction_clean[3:].strip()
         
         # Determine root safely
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -59,7 +67,7 @@ async def handle_incoming_message(payload: dict):
         import subprocess
         try:
             # Simple safety
-            if "rm -rf /" in cmd:
+            if "rm -rf" in cmd and "/" in cmd:
                  result_text = "❌ Forbidden command."
             else:
                  # Execute relative to project root
@@ -78,12 +86,13 @@ async def handle_incoming_message(payload: dict):
                 }, timeout=5)
             except: pass
             
-        return {"status": "executed_emergency", "task_id": task_id}
+        return {"status": "executed_emergency", "task_id": str(uuid.uuid4())}
     # ---------------------------------------------------------------------------
 
+    task_id = str(uuid.uuid4())
     new_task = {
         "id": task_id, 
-        "instruction": message_text.replace(trigger, "").replace(trigger.upper(), "").replace(trigger.capitalize(), "").strip() if message_text else "[VOICE COMMAND]", 
+        "instruction": instruction_clean if instruction_clean else "[VOICE COMMAND]", 
         "sender": sender,
         "source": source,
         "media_path": media_path,

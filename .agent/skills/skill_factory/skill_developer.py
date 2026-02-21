@@ -134,11 +134,12 @@ def main():
                 log("✅ Test execution successful!")
                 log(f"Test Output: {result.stdout.strip()}")
             else:
-                log(f"⚠️ Test execution failed with return code {result.returncode}")
-                # We can choose to deploy anyway if it's just a 'no args' mismatch, or fail.
-                # Here we'll try to refine with Gemini if it failed? (Maybe in v2)
-                log(f"Error: {result.stderr}")
-                # return # Stop deployment on failure
+                log(f"❌ Test execution failed with return code {result.returncode}")
+                # Combine stdout and stderr for better error reporting
+                error_msg = (result.stdout + "\n" + result.stderr).strip()
+                log(f"Error Details: {error_msg}")
+                print(f"❌ **Skill Design Failed:** The generated code did not pass the test execution.")
+                return # Stop deployment on failure
         except Exception as e:
             log(f"❌ Sandbox error: {e}")
             return

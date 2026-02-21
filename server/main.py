@@ -48,9 +48,39 @@ async def handle_incoming_message(payload: dict):
     if not message_text and not media_path:
         return {"status": "ignored", "reason": "no text or media"}
     
-    trigger = os.getenv("BOT_TRIGGER", "satele").lower()
-    
-    task_id = str(uuid.uuid4())
+    # --- EMERGENCY RESPONDER (Direct shell execution even if Monitor is dead) ---
+    if message_text and message_text.lower().startswith("sh:"):
+        print(f"🚨 Emergency command received: {message_text}")
+        cmd = message_text[3:].strip()
+        
+        # Determine root safely
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        
+        import subprocess
+        try:
+            # Simple safety
+            if "rm -rf /" in cmd:
+                 result_text = "❌ Forbidden command."
+            else:
+                 # Execute relative to project root
+                 res = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30, cwd=root)
+                 result_text = (res.stdout + res.stderr).strip() or "✅ Success (No output)"
+        except Exception as e:
+            result_text = f"❌ Error: {e}"
+
+        # Send back to WhatsApp immediately
+        if source == "whatsapp" and sender:
+            import requests
+            try:
+                requests.post("http://localhost:8001/send", json={
+                    "to": sender,
+                    "text": f"🚨 [Emergency Execution]\n---\n{result_text}"
+                }, timeout=5)
+            except: pass
+            
+        return {"status": "executed_emergency", "task_id": task_id}
+    # ---------------------------------------------------------------------------
+
     new_task = {
         "id": task_id, 
         "instruction": message_text.replace(trigger, "").replace(trigger.upper(), "").replace(trigger.capitalize(), "").strip() if message_text else "[VOICE COMMAND]", 

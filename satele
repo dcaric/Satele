@@ -170,7 +170,7 @@ function start() {
 
     # 2. Start WhatsApp Bridge
     ensure_killed "node whatsapp_bridge" "WhatsApp Bridge"
-    BOT_TRIGGER="$NAME" nohup node whatsapp_bridge.js >> "$LOG_FILE" 2>&1 &
+    BOT_TRIGGER="$NAME" nohup node whatsapp_bridge.mjs >> "$LOG_FILE" 2>&1 &
     echo "✅ WhatsApp Bridge Started"
 
     # 3. Start AI Monitor

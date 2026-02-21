@@ -126,6 +126,29 @@ async def get_task(authorization: Optional[str] = Header(None)):
     results[task["id"]] = {"sender": task.get("sender"), "source": task.get("source")}
     return task
 
+@app.post("/status-update")
+async def status_update(
+    payload: dict = Body(...), 
+    authorization: Optional[str] = Header(None)
+):
+    verify_token(authorization)
+    task_id = payload.get("id")
+    message = payload.get("message")
+    
+    meta = results.get(task_id, {})
+    sender = meta.get("sender")
+    source = meta.get("source")
+
+    if source == "whatsapp" and sender:
+        try:
+            requests.post("http://localhost:8001/send", json={
+                "to": sender,
+                "text": message
+            }, timeout=5)
+        except: pass
+    
+    return {"status": "sent"}
+
 @app.post("/report-result")
 async def report_result(
     payload: dict = Body(...), 

@@ -12,6 +12,7 @@ This document describes the technical architecture of Satele, a WhatsApp-based A
 - [Autonomous Evolution](#autonomous-evolution)
 - [Remote Command Execution](#remote-command-execution)
 - [Advanced File Management](#advanced-file-management)
+- [Agentic Mode & Sandbox Investigations](#agentic-mode--sandbox-investigations)
 - [Enterprise Readiness & Security Evolution](#enterprise-readiness--security-evolution)
 
 ---
@@ -577,5 +578,29 @@ Satele's design allows for the injection of a **Security Validator** in the comm
 - **Approval Workflows:** High-risk actions (like server restarts) can be intercepted to require a "Second Sign-off" from a manager via their own communication bridge.
 - **Audit Trails:** Every command, AI interpretation, and system response is logged, allowing for full integration with Enterprise SIEM tools like **Splunk or ELK**.
 
-### 4. Sandbox Deployment
-By utilizing the existing **Docker-based architecture**, Satele can be deployed in a "Hardened Container," ensuring it has zero access to the host system except through strictly defined and audited volume mounts.
+---
+
+## Agentic Mode & Sandbox Investigations
+
+Satele features a high-level **Agentic Mode** for solving complex tasks that require experimentation, data gathering, or multi-step reasoning.
+
+### 1. Triggering Agentic Mode
+Users can trigger this mode by using the prefix `agentic -` (e.g., *"m1 agentic - find why my network is slow and fix it"*).
+
+### 2. Autonomous Investigation Loop
+When triggered, Satele enters a **Self-Correction Loop** managed by Gemini:
+- **Sandbox Environment:** Satele creates a dedicated, git-ignored directory (`satele_working/`) and a private Python virtual environment (`sateletestvenv`).
+- **Iteration:** Gemini iterates through the task by writing Python scripts, executing them in the sandbox, reading the output/errors, and adjusting its approach.
+- **Independence:** The agent can install its own dependencies (via `pip`) and create temporary tools.
+- **Safety:** The process is governed by a **120-second timeout** to prevent runaway processes.
+
+### 3. Real-time Progress Notifications
+Unlike standard commands, Agentic Mode provides live feedback to the user:
+1. **Startup:** Notifies the user that an investigation has begun.
+2. **Steps:** Sends intermediate updates for each experimental attempt.
+3. **Transparency:** Shares truncated logs of what the scripts are finding.
+4. **Finality:** Delivers a "FINAL:" solution once the investigation is complete.
+
+### 4. Safety Considerations
+- **Isolated Venv:** All experiments are confined to the `sateletestvenv`, protecting the main Satele environment.
+- **No Persistence:** The `satele_working` folder is intended for transient investigation and is excluded from source control.

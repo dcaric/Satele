@@ -388,6 +388,134 @@ def ai_interpret(instruction, media_path=None):
             
     return cleaned_lines
 
+def agentic_mode(instruction, task_id=None):
+    """
+    [v3.0] Autonomous Investigation Loop.
+    Gemini iterates through scripts in a sandbox to solve complex tasks.
+    """
+    if not client:
+        return "❌ Agentic mode requires Gemini API key."
+
+    log(f"🔎 Switching to Agentic Mode: {instruction}")
+    
+    # helper for updates
+    def notify(msg):
+        if task_id:
+            try:
+                requests.post(
+                    f"{BASE_URL}/status-update",
+                    json={"id": task_id, "message": msg},
+                    headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
+                    timeout=5
+                )
+            except: pass
+
+    notify(f"🔎 **Starting Agentic Investigation**\n---\n**Task:** {instruction}\n**Status:** Creating sandbox environment. Please wait up to 2 minutes...")
+
+    # 1. Setup Sandbox
+    working_dir = os.path.join(PROJECT_ROOT, "satele_working")
+    os.makedirs(working_dir, exist_ok=True)
+    venv_path = os.path.join(working_dir, "sateletestvenv")
+    
+    # Ensure venv exists
+    if not os.path.exists(venv_path):
+        log("📦 Creating Agentic Venv (One-time setup)...")
+        notify("📦 Setting up virtual environment for the investigation...")
+        try:
+            subprocess.run([sys.executable, "-m", "venv", venv_path], check=True)
+        except Exception as e:
+            return f"❌ Failed to create sandbox venv: {e}"
+    
+    python_bin = os.path.join(venv_path, "bin", "python3")
+    pip_bin = os.path.join(venv_path, "bin", "pip")
+    
+    start_time = time.time()
+    max_duration = 110 # Slightly less than 2 mins buffer
+    
+    history = []
+    current_attempt = 1
+    
+    system_prompt = f"""
+    You are in Satele AGENTIC INVESTIGATION MODE. Your goal is to solve a complex system task by writing and running Python scripts.
+    
+    SANDBOX RULES:
+    1. Workspace: {working_dir}
+    2. Isolated Venv Python Binary: {python_bin}
+    3. You can install missing packages using `{pip_bin} install package_name` via subprocess if needed.
+    4. PREFER built-in Python libraries or scripts that don't require heavy system tools.
+    5. Each response must contain exactly one action.
+    6. If you need to run code, provide a brief explanation and then THE CODE in a ```python ... ``` block.
+    7. I will capture STDOUT/STDERR and return it to you for the next iteration.
+    8. Once solved, respond with "FINAL:" followed by a concise answer for the user.
+    9. Limit: 2 minutes total. Be efficient.
+    
+    USER TASK: {instruction}
+    """
+    
+    while time.time() - start_time < max_duration:
+        context = ""
+        # Keep only last few steps to save tokens/focus
+        for h in history[-3:]:
+            context += f"\n--- Attempt {h['step']} ---\nAction: {h['action']}\nResult: {h['result']}\n"
+        
+        full_prompt = f"{system_prompt}\n\n{context}\n\nDecision Time (Attempt {current_attempt}):"
+        
+        try:
+            response = client.models.generate_content(
+                model=gemini_model_name,
+                contents=full_prompt
+            )
+            ai_text = response.text.strip()
+            
+            if "FINAL:" in ai_text:
+                parts = ai_text.split("FINAL:", 1)
+                return f"✅ Agentic Solution:\n{parts[1].strip()}"
+            
+            # Extract python code
+            code = ""
+            py_match = re.search(r'```python\n(.*?)\n```', ai_text, re.DOTALL)
+            if py_match:
+                code = py_match.group(1).strip()
+            else:
+                # Try generic code block
+                any_match = re.search(r'```(.*?)\n(.*?)\n```', ai_text, re.DOTALL)
+                if any_match: code = any_match.group(1).strip()
+            
+            if code:
+                script_path = os.path.join(working_dir, f"step_{current_attempt}.py")
+                with open(script_path, "w") as f:
+                    f.write(code)
+                
+                log(f"🕵️ Agentic: Running Attempt {current_attempt}...")
+                notify(f"⚙️ **Investigation Step {current_attempt}:** Trying a new approach...")
+                
+                process = subprocess.run([python_bin, script_path], capture_output=True, text=True, timeout=35)
+                out = (process.stdout + "\n" + process.stderr).strip()
+                
+                history.append({
+                    "step": current_attempt,
+                    "action": f"Ran script {current_attempt}",
+                    "result": out if out else "[No Output/Success]"
+                })
+                
+                # Update user with output summary
+                truncated_out = out if len(out) < 200 else out[:200] + "..."
+                notify(f"📝 **Output {current_attempt}:**\n---\n{truncated_out}")
+            else:
+                history.append({
+                    "step": current_attempt,
+                    "action": "Analysis",
+                    "result": "AI provided reasoning but no code block. Asking for code."
+                })
+                
+        except Exception as e:
+            log(f"Agentic loop error: {e}")
+            return f"❌ Agentic process failed: {e}"
+            
+        current_attempt += 1
+        
+    return "⌛ Agentic timeout: The investigation took longer than 2 minutes. I've stopped to save resources."
+
 def ai_reason(instruction, tool_output):
     """
     Second pass: Performs specific data extraction or analysis on the tool output.
@@ -446,10 +574,16 @@ def ai_reason(instruction, tool_output):
         log(f"Reasoning Error: {e}")
         return f"[Error] {tool_output[:500]}..."
 
-def process_instruction(instruction, media_path=None):
+def process_instruction(instruction, media_path=None, task_id=None):
     log(f"📩 Processing: {instruction} (Media: {media_path is not None})")
     
-    # 1. Direct Shell Access (Text only - supports multi-command with ;)
+    # 1. Agentic Mode (Autonomous investigation loop)
+    if instruction.lower().startswith("agentic -"):
+        task = instruction[9:].strip()
+        log(f"🕵️ Autonomous Agentic Mode Triggered: {task}")
+        return agentic_mode(task, task_id)
+
+    # 2. Direct Shell Access (Text only - supports multi-command with ;)
     if not media_path and instruction.lower().startswith("sh:"):
         cmd = instruction[3:].strip()
         out = run_shell(cmd)
@@ -698,7 +832,7 @@ def monitor_loop():
                             )
                             task_processed = True
                         else:
-                            result = process_instruction(instruction, media_path)
+                            result = process_instruction(instruction, media_path, task_id)
                             
                             requests.post(
                                 f"{BASE_URL}/report-result",

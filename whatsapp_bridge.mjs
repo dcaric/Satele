@@ -1,10 +1,15 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadContentFromMessage } = require('@whiskeysockets/baileys');
-const { Boom } = require('@hapi/boom');
-const pino = require('pino');
-const axios = require('axios');
-const path = require('path');
-const qrcode = require('qrcode-terminal');
-const fs = require('fs');
+import scriptSelector from '@whiskeysockets/baileys';
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadContentFromMessage } = scriptSelector;
+import { Boom } from '@hapi/boom';
+import pino from 'pino';
+import axios from 'axios';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import qrcode from 'qrcode-terminal';
+import fs from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Configuration
 const SERVER_URL = "http://localhost:8000/webhook/message";
@@ -189,7 +194,7 @@ async function startWhatsApp() {
 }
 
 // REST server to allow Python/FastAPI to send WhatsApp messages back
-const express = require('express');
+import express from 'express';
 const expressApp = express();
 expressApp.use(express.json());
 

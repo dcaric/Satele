@@ -221,7 +221,7 @@ function start() {
 function stop() {
     echo "🛑 Stopping Satele Services..."
     ensure_killed "Python server/main.py" "FastAPI Server"
-    ensure_killed "node whatsapp_bridge.js" "WhatsApp Bridge"
+    ensure_killed "node whatsapp_bridge.mjs" "WhatsApp Bridge"
     ensure_killed "monitor.py" "AI Monitor"
     echo "✅ All Satele processes terminated."
 }
@@ -333,7 +333,7 @@ function status() {
     
     # Check Processes
     if lsof -i :8000 > /dev/null 2>&1 || is_running "server/main.py"; then echo "🔹 FastAPI: RUNNING"; else echo "🔸 FastAPI: STOPPED"; fi
-    if is_running "whatsapp_bridge.js"; then echo "🔹 WhatsApp Bridge: RUNNING"; else echo "🔸 WhatsApp Bridge: STOPPED"; fi
+    if is_running "whatsapp_bridge.mjs"; then echo "🔹 WhatsApp Bridge: RUNNING"; else echo "🔸 WhatsApp Bridge: STOPPED"; fi
     
     local INTERVAL=$(get_env_var "POLL_INTERVAL" "2")
     if is_running "monitor.py"; then 

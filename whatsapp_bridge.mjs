@@ -1,5 +1,4 @@
-import scriptSelector from '@whiskeysockets/baileys';
-const { useMultiFileAuthState, makeWASocket, DisconnectReason, downloadContentFromMessage } = scriptSelector.default || scriptSelector;
+import { makeWASocket, useMultiFileAuthState, DisconnectReason, downloadContentFromMessage } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import pino from 'pino';
 import axios from 'axios';
@@ -37,6 +36,7 @@ async function downloadMedia(message, type, extension = 'bin') {
 
 async function startWhatsApp() {
     console.log("🚀 Starting WhatsApp Linked-Device Listener (using Baileys)...");
+    console.log(`🤖 Bot Trigger: ${ANTIGRAVITY_TRIGGER}`);
 
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
 
@@ -74,12 +74,10 @@ async function startWhatsApp() {
         }
     });
 
-    // ... (rest of the file)
-
     // Listen for incoming messages
     sock.ev.on('messages.upsert', async m => {
         const { messages, type } = m;
-        console.log(`📥 Received message event: ${type} (${messages.length} messages)`);
+        // console.log(`📥 Received message event: ${type} (${messages.length} messages)`);
 
         for (const msg of messages) {
             let text = msg.message?.conversation ||
@@ -95,16 +93,16 @@ async function startWhatsApp() {
             const sender = msg.key.remoteJid;
             const targetSender = fromMe ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : sender;
 
+            if (text) console.log(`💬 Message from ${fromMe ? 'ME' : sender}: "${text.substring(0, 100)}${text.length > 100 ? '...' : ''}"`);
+
             // --- WHITELIST CHECK ---
-            // Allow self (fromMe) by default.
-            // Check ALLOWED_NUMBERS env for others.
             const allowedList = (process.env.ALLOWED_NUMBERS || "").split(',').map(n => n.trim()).filter(n => n);
             const senderId = sender.split('@')[0].split(':')[0]; // Remove suffix and connection ID
 
             const isAllowed = fromMe || allowedList.includes(senderId);
 
             if (!isAllowed) {
-                console.log(`🚫 START_IGNORE: Blocked message from unauthorized sender: ${sender}`);
+                console.log(`🚫 IGNORED: Unauthorized sender: ${senderId}. Update ALLOWED_NUMBERS if this is you.`);
                 continue;
             }
             // -----------------------
@@ -116,9 +114,6 @@ async function startWhatsApp() {
                 try {
                     mediaPath = await downloadMedia(msg.message.audioMessage, 'audio', 'ogg');
                     console.log(`✅ Saved voice note to ${mediaPath}`);
-                    // For voice notes, we treat them as if they have the trigger implicitly 
-                    // or we check if user said anything in text. Since it's PTT, we 
-                    // usually just process it.
                     text = (text || "") + " [VOICE]";
                 } catch (e) {
                     console.error("❌ Failed to download audio:", e.message);
@@ -145,21 +140,19 @@ async function startWhatsApp() {
             }
 
             if (text) {
-                console.log(`💬 Message from ${fromMe ? 'ME' : sender}: "${text}"`);
-
                 // 1. Prevent Loops: Ignore messages that are likely bot outputs
                 if (text.startsWith("🤖") || text.includes("[Bot]") ||
                     text.startsWith("✅") || text.startsWith("❌") || text.startsWith("🎙️")) {
-                    console.log("🚫 Ignoring bot output message.");
                     return;
                 }
 
-                // 2. Trigger Check (using regex for word boundary to avoid "antigravity" matching "gravity")
+                // 2. Trigger Check
+                console.log(`🔍 DEBUG: Checking trigger "${ANTIGRAVITY_TRIGGER}" (len: ${ANTIGRAVITY_TRIGGER.length}) against "${text.substring(0, 20)}..."`);
                 const triggerRegex = new RegExp(`\\b${ANTIGRAVITY_TRIGGER}\\b`, 'i');
                 const isTriggered = triggerRegex.test(text) || (isAudio && mediaPath);
 
                 if (isTriggered) {
-                    console.log(`🎯 Trigger matched!`);
+                    console.log(`🎯 Trigger matched! Forwarding to server...`);
 
                     try {
                         await axios.post(SERVER_URL, {
@@ -169,17 +162,19 @@ async function startWhatsApp() {
                             fromMe: fromMe,
                             mediaPath: mediaPath
                         });
-                        console.log("✅ Forwarded to Antigravity server.");
+                        console.log("✅ Successfully forwarded to Antigravity server.");
 
-                        // 3. Updated Acknowledgment (Avoid using the trigger word itself?)
-                        // Actually, users want to know which bot replied (M3 vs Satele)
-                        // But we capitalize it for niceness
                         const botName = ANTIGRAVITY_TRIGGER.charAt(0).toUpperCase() + ANTIGRAVITY_TRIGGER.slice(1);
                         const ackText = isAudio ? `🎙️ [${botName}] Listening...` : `🤖 [${botName}] Working...`;
                         await sock.sendMessage(targetSender, { text: ackText });
                     } catch (err) {
-                        console.error("❌ Bridge Error:", err.message);
+                        console.error("❌ Bridge Forwarding Error:", err.message);
+                        if (err.code === 'ECONNREFUSED') {
+                            console.error("👉 Make sure the FastAPI server is running on port 8000.");
+                        }
                     }
+                } else {
+                    console.log(`❕ Trigger NOT matched (Looking for: "${ANTIGRAVITY_TRIGGER}")`);
                 }
             }
         }

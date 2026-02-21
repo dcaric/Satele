@@ -49,40 +49,47 @@ def generate_skill_content(description, api_key, model_name):
     
     SKILL DESCRIPTION: {description}
     
-    RULES:
-    1. Your implementation must be a single Python script.
-    2. Your documentation must be a valid SKILL.md file with YAML frontmatter.
-    3. Use only standard libraries or 'requests' (assume it is available).
-    4. If you need to return a result to the user, print it.
-    5. If you generate a file or image, print 'UPLOAD:/path/to/file'.
-    6. Output your response as a JSON object with two keys: 'python_code' and 'skill_md'.
-    7. The python_code must be the full script.
-    8. The skill_md must be the full SKILL.md content.
-    9. Ensure paths in SKILL.md use the template: .agent/skills/SKILL_NAME/FILE_NAME.py
+    RULES FOR OUTPUT:
+    1. Respond ONLY with a valid JSON object.
+    2. The JSON object must have three keys: 'python_code', 'skill_md', and 'suggested_folder_name'.
+    3. 'python_code': The full Python script as a single string. Use standard libraries. Handle errors.
+    4. 'skill_md': The full SKILL.md content as a string, with YAML frontmatter.
+    5. 'suggested_folder_name': A short, lowercase, underscore-based name for the skill folder.
+    6. IMPORTANT: Escape all backslashes and double-quotes correctly inside the JSON strings.
     
-    FORMAT:
+    EXAMPLE STRUCTURE:
     {{
-      "python_code": "import os...",
-      "skill_md": "---\\nname: ...",
-      "suggested_folder_name": "lowercase_underscore_name"
+      "suggested_folder_name": "weather_checker",
+      "python_code": "import os\\nimport sys\\n...",
+      "skill_md": "---\\nname: Weather Checker\\ndescription: ...\\n---\\n..."
     }}
     """
     
     response = model.generate_content(prompt)
     text = response.text
     
-    # Extract JSON
+    # Extract JSON with improved robustness
     try:
-        data = json.loads(re.search(r"\{.*\}", text, re.DOTALL).group(0))
-        return data
-    except:
-        # Fallback parsing if JSON block is wrapped in markdown
-        clean_text = re.sub(r"```json\s*", "", text)
-        clean_text = re.sub(r"\s*```", "", clean_text)
+        # 1. Look for ```json ... ``` block
+        json_match = re.search(r"```json\s*(\{.*?\})\s*```", text, re.DOTALL)
+        if not json_match:
+            # 2. Look for any {...} structure
+            json_match = re.search(r"(\{.*\})", text, re.DOTALL)
+        
+        if json_match:
+            # Use strict=False to handle potential invalid control characters/escapes
+            return json.loads(json_match.group(1), strict=False)
+        else:
+            raise Exception("No JSON found in Gemini response")
+            
+    except Exception as e:
+        log(f"⚠️ JSON Parse Error: {e}")
+        # Final fallback: desperate attempt to clean common Gemini JSON artifacts
         try:
-            return json.loads(clean_text)
+            clean_text = text.replace("```json", "").replace("```", "").strip()
+            return json.loads(clean_text, strict=False)
         except:
-            raise Exception("Failed to parse Gemini response as JSON")
+            raise Exception(f"Failed to parse Gemini response as JSON. Error: {e}")
 
 def main():
     if len(sys.argv) < 2:

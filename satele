@@ -157,9 +157,9 @@ function start() {
     NAME=${BOT_TRIGGER:-"satele"}
 
     # Inject local lib into PYTHONPATH for dependency resolution
-    export PYTHONPATH="$BASE_DIR/lib:$PYTHONPATH"
-    echo "🐍 Environment: PYTHONPATH updated to include local lib."
-    PYTHON_CMD="python3"
+    export PYTHONPATH="$BASE_DIR/lib"
+    echo "🐍 Environment: PYTHONPATH isolated to local lib."
+    PYTHON_CMD="$BASE_DIR/venv/bin/python3"
 
     # 1. Start FastAPI Server
     if [ -f "server/main.py" ]; then
@@ -170,7 +170,7 @@ function start() {
 
     # 2. Start WhatsApp Bridge
     ensure_killed "node whatsapp_bridge" "WhatsApp Bridge"
-    BOT_TRIGGER="$NAME" nohup node whatsapp_bridge.mjs >> "$LOG_FILE" 2>&1 &
+    BOT_TRIGGER="$NAME" nohup node whatsapp_bridge.js >> "$LOG_FILE" 2>&1 &
     echo "✅ WhatsApp Bridge Started"
 
     # 3. Start AI Monitor

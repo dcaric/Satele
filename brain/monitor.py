@@ -3,6 +3,11 @@ import sys
 import time
 import datetime
 import subprocess
+import requests
+import json
+import platform
+import re
+from dotenv import load_dotenv
 
 # Determine and store the project root
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -10,10 +15,6 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 lib_path = os.path.join(PROJECT_ROOT, "lib")
 if os.path.exists(lib_path) and lib_path not in sys.path:
     sys.path.append(lib_path)
-
-import requests
-import json
-import platform
 
 # Compatibility for Python < 3.10
 try:
@@ -30,8 +31,6 @@ def log(msg):
 
 
 from google import genai
-import re
-from dotenv import load_dotenv
 
 
 # Load environment variables from consolidated satele.config

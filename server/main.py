@@ -15,6 +15,9 @@ load_dotenv()
 from pydantic import BaseModel
 from typing import List, Optional
 import uuid
+import re
+import requests
+import uvicorn
 
 app = FastAPI(title="Remote Bridge Server")
 
@@ -140,7 +143,6 @@ async def report_result(
 
     # If from WhatsApp, push back to the Node.js bridge
     if source == "whatsapp" and sender:
-        import requests
         try:
             # Check for File Upload Command
             if output.strip().startswith("UPLOAD:"):
@@ -164,7 +166,6 @@ async def report_result(
                      })
             else:
                 # Standard Text Reply
-                import re
                 # If output starts with an emoji, or already has a status header (like '📥', '📊', '♻️'), use it as is
                 emoji_pattern = r'^(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])'
                 if re.match(emoji_pattern, output.strip()):
@@ -182,5 +183,4 @@ async def report_result(
     return {"status": "received"}
 
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

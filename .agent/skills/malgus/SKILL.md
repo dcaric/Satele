@@ -5,7 +5,7 @@ description: Enables Satele to communicate with the Malgus AI agent running on t
 
 # Malgus Intelligence Skill
 
-This skill allows the Antigravity Agent to delegate tasks or query the Malgus AI agent. Malgus is another specialized autonomous agent running on the same local environment.
+This skill allows the Satele AI Agent to delegate tasks or query the Malgus AI agent. Malgus is another specialized autonomous agent running on the same local environment.
 
 ## Capabilities
 1. **Chat/Task Delegation**: Send messages or complex instructions to Malgus.

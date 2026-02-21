@@ -476,6 +476,11 @@ def process_instruction(instruction, media_path=None):
                                 except: pass
                     return current
                 raw_path = resolve_case_insensitive(raw_path)
+                if os.path.isdir(raw_path):
+                    msg = f"⚠️ Satele Error: '{raw_path}' is a directory. I cannot upload folders, only individual files."
+                    log(msg)
+                    full_output.append(msg)
+                    continue
                 return f"UPLOAD: {raw_path}"
             
             # Intercept 'cd'

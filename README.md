@@ -240,6 +240,14 @@ Logs: tail -f /tmp/satele_dcaric.log
 > *"Send me satele.log"*
 > *"Get config.json"*
 
+> [!TIP]
+> **Large Output Ad-hoc Attachments:** If a requested log or output is too large for a standard message, Satele can automatically (or upon request) send it as an attachment.
+>
+> **Example Interaction:**
+> *   User: *"m1 ask malgus to show apartments help, send me as attachment"*
+> *   Satele: *"🤖 [M1] Working..."*
+> *   Satele: *"📄 Here is the file: malgus_apartments_help.txt"*
+
 > *Sending a file to Satele:*
 > ![File Receive Example](images_examples/attachment_receive.png)
 

@@ -37,3 +37,11 @@ Simply invoke the skill. It will return a JSON object containing the recipe name
 *   `random`: For selecting a random recipe.
 *   `json`: For formatting the output as JSON.
 *   `ssl` and `urllib`: Not used for external requests, but included as placeholders in case future versions require data from public, keyless URLs.
+
+## Tools
+`python3 .agent/skills/split_recipe_generator/split_recipe_generator.py`
+
+## Usage Examples
+- "Give me a Split recipe"
+- "How do they make Soparnik?"
+- "Random Dalmatian recipe"

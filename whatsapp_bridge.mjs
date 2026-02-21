@@ -1,5 +1,5 @@
 import scriptSelector from '@whiskeysockets/baileys';
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadContentFromMessage } = scriptSelector;
+const { useMultiFileAuthState, makeWASocket, DisconnectReason, downloadContentFromMessage } = scriptSelector.default || scriptSelector;
 import { Boom } from '@hapi/boom';
 import pino from 'pino';
 import axios from 'axios';

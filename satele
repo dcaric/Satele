@@ -571,10 +571,21 @@ function list_skills() {
             echo -e "\033[1;34m🔸 $NAME\033[0m"
             [ -n "$DESC" ] && echo "   📝 $DESC"
             
-            # Extract examples (lines starting with - in Usage Examples or Examples section)
             echo "   💡 Examples:"
-            # Simple heuristic to find examples in markdown
-            sed -n '/Usage Examples/,/^#/p;/Examples/,/^#/p' "$SKILL_MD" | grep "^-" | head -n 3 | sed 's/^- /      - /'
+            # Better heuristic: Look for lines starting with '-' under headings like Usage, Examples, Case, etc.
+            local EX=$(sed -n '/[Uu]sage/,/^#/p;/[Ee]xample/,/^#/p;/[Cc]ase/,/^#/p' "$SKILL_MD" | grep "^-" | head -n 3 | sed 's/^- /      - /')
+            
+            if [ -z "$EX" ]; then
+                # Fallback: check for any `python3 ...` command in the file
+                local TOOL=$(grep "\`python3 .*\`" "$SKILL_MD" | head -n 1 | sed 's/`//g' | xargs)
+                if [ -n "$TOOL" ]; then
+                    echo "      - $TOOL"
+                else
+                    echo "      - (No examples found in SKILL.md)"
+                fi
+            else
+                echo "$EX"
+            fi
             echo ""
         fi
     done

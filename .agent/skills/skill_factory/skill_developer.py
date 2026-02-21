@@ -50,19 +50,23 @@ def generate_skill_content(description, api_key, model_name):
     SKILL DESCRIPTION: {description}
     
     RULES FOR OUTPUT:
-    1. Respond ONLY with a valid JSON object.
+    1. Respond ONLY with a valid JSON object. No other text or markdown outside the JSON.
     2. The JSON object must have three keys: 'python_code', 'skill_md', and 'suggested_folder_name'.
-    3. 'python_code': The full Python script as a single string. Use standard libraries. Handle errors.
-    4. 'skill_md': The full SKILL.md content as a string, with YAML frontmatter. It MUST include a '## Tools' section with the tool tag: `python3 .agent/skills/FOLDER_NAME/SCRIPT_NAME.py`.
-    5. 'suggested_folder_name': A short, lowercase, underscore-based name for the skill folder.
-    6. IMPORTANT: Escape all backslashes and double-quotes correctly inside the JSON strings.
+    3. 'suggested_folder_name': Create a short, descriptive folder name (lowercase, underscores).
+    4. 'python_code': The full Python script. 
+       - CRITICAL: DO NOT use APIs that require an API Key or registration (like Spoonacular, OpenWeatherMap, etc.). 
+       - If the task requires specialized info (like recipes), the script can use the AI's internal knowledge to 'generate' the result or use a public, keyless URL/Scraper.
+       - Use 'urllib' (native) for web requests. Handle SSL certificates safely.
+    5. 'skill_md': The full SKILL.md content. Include a '## Tools' section.
+    6. Ensure the logic matches the DESCRIPTION exactly.
+    """
     
-    EXAMPLE STRUCTURE:
-    {{
+    EXAMPLE_STRUCTURE = """
+    {
       "suggested_folder_name": "weather_checker",
       "python_code": "import os\\nimport sys\\n...",
       "skill_md": "---\\nname: Weather Checker\\ndescription: ...\\n---\\n..."
-    }}
+    }
     """
     
     response = model.generate_content(prompt)

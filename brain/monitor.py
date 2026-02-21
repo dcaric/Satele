@@ -596,11 +596,13 @@ def monitor_loop():
                                 timeout=5
                             )
                             # Actual restart via background one-liner to ensure reliability
-                            os.system("nohup bash -c 'sleep 2; ./satele stop; ./satele start' > /dev/null 2>&1 &")
+                            satele_path = os.path.join(PROJECT_ROOT, "satele")
+                            os.system(f"nohup bash -c 'sleep 2; \"{satele_path}\" stop; \"{satele_path}\" start' > /dev/null 2>&1 &")
                             task_processed = True
                         elif instruction and re.search(r"(?i)\b(git pull|update|pull changes)\b", instruction):
                             log("📥 Internal Git Pull Triggered.")
-                            out = run_shell("./satele gitpull")
+                            satele_path = os.path.join(PROJECT_ROOT, "satele")
+                            out = run_shell(f"\"{satele_path}\" gitpull")
                             result = f"📥 **System Update:**\n{out}"
                             requests.post(
                                 f"{BASE_URL}/report-result",
@@ -611,7 +613,8 @@ def monitor_loop():
                             task_processed = True
                         elif instruction and re.search(r"(?i)(status|alive)", instruction):
                             log("📊 Internal Status Check Triggered.")
-                            out = run_shell("./satele status")
+                            satele_path = os.path.join(PROJECT_ROOT, "satele")
+                            out = run_shell(f"\"{satele_path}\" status")
                             result = f"📊 **System Status:**\n{out}"
                             requests.post(
                                 f"{BASE_URL}/report-result",
@@ -629,7 +632,8 @@ def monitor_loop():
                             if clean_cmd.startswith("satele "):
                                 sub_cmd = clean_cmd[7:].strip()
                                 log(f"🏃 Running Satele sub-command: {sub_cmd}")
-                                out = run_shell(f"./satele {sub_cmd}")
+                                satele_path = os.path.join(PROJECT_ROOT, "satele")
+                                out = run_shell(f"\"{satele_path}\" {sub_cmd}")
                                 result = f"🧾 **Satele Printout ({sub_cmd}):**\n{out}"
                             elif clean_cmd:
                                 log(f"🏃 Running Shell command: {clean_cmd}")

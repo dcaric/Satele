@@ -229,8 +229,9 @@ function stop() {
 
 function restart() {
     echo "♻️ Restarting Satele in 2 seconds..."
-    # Run in background via nohup to ensure the parent process can exit first
-    nohup bash -c "sleep 2; stop; start" > /dev/null 2>&1 &
+    # Use the absolute path to the script to ensure it's found in the background subshell
+    local SATELE_EXE="$BASE_DIR/satele"
+    nohup bash -c "sleep 2; \"$SATELE_EXE\" stop; \"$SATELE_EXE\" start" > /dev/null 2>&1 &
     echo "✅ Restart command received. Services will refresh momentarily."
 }
 

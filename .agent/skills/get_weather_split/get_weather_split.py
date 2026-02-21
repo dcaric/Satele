@@ -1,56 +1,38 @@
-import requests
+import urllib.request
 import json
+import ssl
 
-def get_weather_split():
+def get_weather():
+    url = "https://api.open-meteo.com/v1/forecast?latitude=43.5081&longitude=16.4402&current=temperature_2m,wind_speed_10m,weather_code"
+    
+    # Handle SSL issues common on Mac
+    context = ssl._create_unverified_context()
+    
     try:
-        url = 'https://api.open-meteo.com/v1/forecast?latitude=43.51&longitude=16.44&current=temperature_2m,weather_code&timezone=Europe%2FBerlin'
-        response = requests.get(url)
-        response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
-        data = response.json()
-
-        temperature = data['current']['temperature_2m']
-        weather_code = data['current']['weather_code']
-
-        weather_interpretations = {
-            0: "Clear sky",
-            1: "Mainly clear",
-            2: "Partly cloudy",
-            3: "Overcast",
-            45: "Fog",
-            48: "Depositing rime fog",
-            51: "Drizzle: Light intensity",
-            53: "Drizzle: Moderate intensity",
-            55: "Drizzle: Dense intensity",
-            56: "Freezing Drizzle: Light intensity",
-            57: "Freezing Drizzle: Dense intensity",
-            61: "Rain: Slight intensity",
-            63: "Rain: Moderate intensity",
-            65: "Rain: Heavy intensity",
-            66: "Freezing Rain: Light intensity",
-            67: "Freezing Rain: Heavy intensity",
-            71: "Snow fall: Slight intensity",
-            73: "Snow fall: Moderate intensity",
-            75: "Snow fall: Heavy intensity",
-            77: "Snow grains",
-            80: "Rain showers: Slight intensity",
-            81: "Rain showers: Moderate intensity",
-            82: "Rain showers: Violent intensity",
-            85: "Snow showers: Slight intensity",
-            86: "Snow showers: Heavy intensity",
-            95: "Thunderstorm: Slight or moderate",
-            96: "Thunderstorm with slight hail",
-            99: "Thunderstorm with heavy hail"
+        with urllib.request.urlopen(url, context=context) as response:
+            data = json.loads(response.read().decode())
+            
+        temp = data['current']['temperature_2m']
+        wind = data['current']['wind_speed_10m']
+        code = data['current']['weather_code']
+        
+        interpretations = {
+            0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+            45: "Fog", 48: "Rime fog", 51: "Light drizzle", 53: "Moderate drizzle",
+            55: "Dense drizzle", 61: "Slight rain", 63: "Moderate rain", 65: "Heavy rain",
+            71: "Slight snow", 73: "Moderate snow", 75: "Heavy snow", 95: "Thunderstorm"
         }
-
-        weather_description = weather_interpretations.get(weather_code, "Unknown weather code")
-
-        summary = f"The current weather in Split, Croatia is: {temperature}°C and {weather_description}."
+        desc = interpretations.get(code, "Cloudy")
+        
+        summary = f"📊 *Split Weather Summary* 📊\n"
+        summary += f"--------------------------\n"
+        summary += f"🌡️ *Temperature:* {temp}°C\n"
+        summary += f"☁️ *Condition:* {desc}\n"
+        summary += f"💨 *Wind Speed:* {wind} m/s\n"
+        summary += f"--------------------------"
         print(summary)
+    except Exception as e:
+        print(f"❌ Error fetching weather: {e}")
 
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching weather data: {e}")
-    except (KeyError, TypeError) as e:
-        print(f"Error parsing weather data: {e}")
-
-if __name__ == '__main__':
-    get_weather_split()
+if __name__ == "__main__":
+    get_weather()

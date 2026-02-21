@@ -53,7 +53,7 @@ def generate_skill_content(description, api_key, model_name):
     1. Respond ONLY with a valid JSON object.
     2. The JSON object must have three keys: 'python_code', 'skill_md', and 'suggested_folder_name'.
     3. 'python_code': The full Python script as a single string. Use standard libraries. Handle errors.
-    4. 'skill_md': The full SKILL.md content as a string, with YAML frontmatter.
+    4. 'skill_md': The full SKILL.md content as a string, with YAML frontmatter. It MUST include a '## Tools' section with the tool tag: `python3 .agent/skills/FOLDER_NAME/SCRIPT_NAME.py`.
     5. 'suggested_folder_name': A short, lowercase, underscore-based name for the skill folder.
     6. IMPORTANT: Escape all backslashes and double-quotes correctly inside the JSON strings.
     

@@ -9,6 +9,9 @@ This document describes the technical architecture of Satele, a WhatsApp-based A
 - [Data Flow](#data-flow)
 - [Configuration](#configuration)
 - [Extending Satele](#extending-satele)
+- [Autonomous Evolution](#autonomous-evolution)
+- [Remote Command Execution](#remote-command-execution)
+- [Advanced File Management](#advanced-file-management)
 
 ---
 
@@ -512,4 +515,49 @@ To contribute to Satele:
 4. Test thoroughly
 5. Submit a pull request
 
-For questions or issues, please open a GitHub issue.
+---
+
+## Autonomous Evolution
+
+Satele is one of the first AI assistants capable of **self-evolution**. She doesn't just use predefined skills; she can design, test, and install her own new capabilities based on your natural language instructions.
+
+### The Evolution Loop:
+1. **AI Design:** When you ask for a new skill, Satele uses Gemini to architect the Python logic (`.py`) and write the necessary system documentation (`SKILL.md`).
+2. **Sandbox Testing:** Satele creates an isolated "sandbox" environment, installs its dependencies, and runs the code. If it crashes, she reads the error and fixes the code automatically.
+3. **Safety & Performance Rules:**
+   - **Native-First:** To avoid dependency hell, she prefers standard libraries (`urllib`, `json`, `random`).
+   - **Keyless Execution:** She is forbidden from creating skills that require paid API keys or registration.
+   - **SSL Awareness:** She handles Mac-specific SSL certificate issues automatically.
+4. **Automatic Deployment:** Once the test passes, Satele moves the files into the production `.agent/skills/` folder.
+5. **Auto-indexing:** Satele restarts her core monitor, triggering the **Skill Indexer** to recognize the new power and make it available for use immediately.
+
+---
+
+## Remote Command Execution
+
+Users can execute any shell command or Satele CLI command directly from WhatsApp using the "run command" or "sh:" syntax.
+
+### 1. Run Command Syntax
+Users can execute commands using the structure: `<bot-name> run command - <command>`.
+- **AI-Mediated:** These commands are parsed by the AI monitor to ensure correct context.
+- **Example:** `m1 run command - satele status`
+
+### 2. Emergency Responder (`sh:`)
+For cases where the AI Brain might be stalled or stopped, Satele includes an **Emergency Responder** built directly into the FastAPI server (`server/main.py`).
+- **Bypass:** It detects the `sh:` prefix and executes the command directly via the system shell, bypassing the AI task interpretation layer.
+- **Bypass Recovery:** This allows for remote "Revival" of the system (e.g., `sh: ./satele start`) even when the main monitor process is not responding.
+
+---
+
+## Advanced File Management
+
+### 1. Large Output Ad-hoc Attachments
+If a requested log or output is too large for a standard message (typically > 2000 characters), Satele can automatically (or upon request) send it as an attachment.
+- **Process:** Satele writes the output to a temporary `.txt` file in the `media/` directory and returns an `UPLOAD:` directive.
+- **Example:** *"m1 ask malgus to show apartments help, send me as attachment"*
+
+### 2. Zipping Files and Folders
+Satele can handle complex file transfers by zipping them on the fly.
+- **Zipping:** The AI can generate shell commands to zip directories (e.g., `zip -r output.zip folder/`).
+- **Multimodal Delivery:** Using the `UPLOAD:<path>` directive, Satele can deliver PDFs, ZIPs, or any other file type back to WhatsApp.
+- **Remote Retrieval:** This is ideal for pulling logs, source code, or media files from the host machine to your mobile device instantly.

@@ -256,6 +256,20 @@ Logs: tail -f /tmp/satele_dcaric.log
 > *"Launch Calculator"*
 > *"sh: open -a 'Visual Studio Code'"* (macOS)
 
+#### **🏃 Remote Command Execution**
+You can execute any shell command or Satele CLI command directly from WhatsApp using the "run command" syntax. 
+
+**Structure:** `<bot-name> run command - <command>`
+
+*   **Run Satele Commands:**
+    > *"m1 run command - satele status"*
+    > *"m1 run command - satele memory"*
+*   **Run Shell Commands:**
+    > *"m1 run command - ls -la"*
+    > *"m1 run command - uptime"*
+*   **Alternative (Instant Shell):**
+    > *"sh: whoami"*
+
 ---
 
 ## 🛡️ Security

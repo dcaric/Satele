@@ -1,4 +1,13 @@
 import os
+import sys
+
+# Determine and store the project root
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Add local lib to path for all dependencies
+lib_path = os.path.join(PROJECT_ROOT, "lib")
+if os.path.exists(lib_path) and lib_path not in sys.path:
+    sys.path.append(lib_path)
+
 from fastapi import FastAPI, HTTPException, Header, Body
 from dotenv import load_dotenv
 

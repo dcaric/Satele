@@ -6,7 +6,7 @@ import subprocess
 import shutil
 import tempfile
 from datetime import datetime
-import google.generativeai as genai_legacy # For fallback
+
 from google import genai
 
 # Load Config

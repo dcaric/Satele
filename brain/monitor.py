@@ -1,7 +1,16 @@
 import os
+import sys
 import time
 import datetime
 import subprocess
+
+# Determine and store the project root
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Add local lib to path for all dependencies
+lib_path = os.path.join(PROJECT_ROOT, "lib")
+if os.path.exists(lib_path) and lib_path not in sys.path:
+    sys.path.append(lib_path)
+
 import requests
 import json
 import platform
@@ -19,18 +28,11 @@ except ImportError:
 def log(msg):
     print(f"[Monitor] {msg}", flush=True)
 
-import google.generativeai as genai_legacy # For backward compat or type checking if needed
+
 from google import genai
 import re
 from dotenv import load_dotenv
 
-
-# Determine and store the project root
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# Add local lib to path for google-genai
-lib_path = os.path.join(PROJECT_ROOT, "lib")
-if os.path.exists(lib_path) and lib_path not in sys.path:
-    sys.path.append(lib_path)
 
 # Load environment variables from consolidated satele.config
 # Prioritize local brain copy to bypass root permission issues
@@ -38,7 +40,13 @@ env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "satele.conf
 if not os.path.exists(env_path):
     env_path = os.path.join(PROJECT_ROOT, "satele.config")
 
-if os.path.exists(env_path):
+# Check /tmp as an emergency fallback
+if not os.path.exists(env_path) or not os.access(env_path, os.R_OK):
+    tmp_path = "/tmp/satele.config"
+    if os.path.exists(tmp_path):
+        env_path = tmp_path
+
+if os.path.exists(env_path) and os.access(env_path, os.R_OK):
     load_dotenv(env_path)
     log(f"📝 Config loaded from: {env_path}")
 else:

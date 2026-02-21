@@ -86,7 +86,7 @@ Satele is a multi-component system that enables AI-powered automation via WhatsA
 
 **AI Providers:**
 - **Gemini** (default) - Google's Gemini 2.0 Flash
-- **Ollama** (local) - Custom models like `satele-m3`
+- **Ollama** (local) - Custom models like `gemma3:4b`
 
 **Key Functions:**
 
